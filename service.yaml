@@ -1,0 +1,47 @@
+name: devtel
+reportingTeam: fnd-dtss
+description: Devspace telemetry plugin
+slack: dev-tooling-notifications
+library: true
+commands:
+  - devtel
+circleAPIKey: ""
+lintroller: platinum
+releaseType: semver
+releaseOptions:
+  allowPrereleases: true
+  allowMajorVersions: true
+deployTo:
+  environments: []
+arguments:
+  circleAPIKey: ""
+  commands:
+    - devtel
+  dependencies:
+    optional: []
+    required: []
+  description: Devspace telemetry plugin
+  grpcClients: []
+  opslevel:
+    confluenceSpaceKey: DTSS
+    datadogDashboards:
+      mainLink: ""
+    designDocumentLink: ""
+  oss: false
+  releaseOptions:
+    allowMajorVersions: true
+    enablePrereleases: true
+  reportingTeam: fnd-dtss
+  type:
+    - library
+modules:
+  - name: github.com/getoutreach/stencil-base
+opsLevel:
+  serviceTier: 0
+  lifecycle: ""
+  confluenceSpaceKey: DTSS
+  pagerDutyLink: ""
+  datadogDashboards:
+    mainLink: ""
+    custom: []
+  designDocumentLink: ""
