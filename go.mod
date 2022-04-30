@@ -7,7 +7,6 @@ require (
 	github.com/sirupsen/logrus v1.8.1
 	github.com/stretchr/testify v1.7.1
 	github.com/urfave/cli/v2 v2.4.0
-	gotest.tools/v3 v3.1.0
 )
 
 require (
@@ -27,7 +26,6 @@ require (
 	github.com/facebookgo/muster v0.0.0-20150708232844-fd3d7953fd52 // indirect
 	github.com/fatih/color v1.13.0 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
-	github.com/google/go-cmp v0.5.7 // indirect
 	github.com/google/go-github/v43 v43.0.0 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/gorilla/css v1.0.0 // indirect

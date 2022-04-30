@@ -61,6 +61,31 @@ func TestStoreGetAll(t *testing.T) {
 	assert.Equal(t, "content1", val[1].(payload).Content)
 }
 
+func TestStoreGetUnprocessed(t *testing.T) {
+	var buff bytes.Buffer
+	s := NewWithWriter(func(val interface{}) string {
+		return val.(payload).ID
+	}, &buff)
+
+	assert.Nil(t, s.Append(payload{ID: "id1"}))
+	assert.Nil(t, s.Append(payload{ID: "id2"}))
+	assert.Nil(t, s.Append(payload{ID: "id1", Content: "content1"}))
+
+	val := s.GetAll()
+	assert.NotNil(t, val)
+	assert.Len(t, val, 2)
+	assert.Equal(t, "id2", val[0].(payload).ID)
+	assert.Equal(t, "content1", val[1].(payload).Content)
+
+	toProcess := []interface{}{
+		payload{ID: "id1", Content: "content1"},
+	}
+	assert.NoError(t, s.MarkProcessed(toProcess))
+	val = s.GetUnprocessed()
+
+	assert.Len(t, val, 1)
+}
+
 func TestRestore(t *testing.T) {
 	var buff bytes.Buffer
 	s := NewWithWriter(func(val interface{}) string {

@@ -7,14 +7,19 @@ import (
 )
 
 type entry struct {
-	Key  string      `json:"key"`
-	Data interface{} `json:"data"`
+	Key       string      `json:"key"`
+	Data      interface{} `json:"data"`
+	Processed bool        `json:"processed,omitempty"`
 }
 
 type Store interface {
 	Append(value interface{}) error
+
 	Get(key string) interface{}
 	GetAll() []interface{}
+	GetUnprocessed() []interface{}
+
+	MarkProcessed([]interface{}) error
 	Restore(r io.Reader, caster func(map[string]interface{}) interface{}) error
 }
 
@@ -36,7 +41,11 @@ func NewWithWriter(key func(interface{}) string, w io.Writer) Store {
 }
 
 func (s *store) Append(value interface{}) error {
-	e := entry{s.key(value), value}
+	return s.append(value, false)
+}
+
+func (s *store) append(value interface{}, processed bool) error {
+	e := entry{s.key(value), value, processed}
 	if err := s.encoder.Encode(e); err != nil {
 		return err
 	}
@@ -73,6 +82,34 @@ func (s *store) GetAll() []interface{} {
 	}
 
 	return values
+}
+
+func (s *store) GetUnprocessed() []interface{} {
+	indexes := make([]int, 0, len(s.entries))
+	for _, index := range s.index {
+		indexes = append(indexes, index)
+	}
+	sort.Ints(indexes)
+
+	var values []interface{}
+	for _, index := range indexes {
+		val := s.entries[index]
+		if !val.Processed {
+			values = append(values, val.Data)
+		}
+	}
+
+	return values
+}
+
+func (s *store) MarkProcessed(recs []interface{}) error {
+	for _, rec := range recs {
+		if err := s.append(rec, true); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (s *store) Restore(r io.Reader, caster func(val map[string]interface{}) interface{}) error {
