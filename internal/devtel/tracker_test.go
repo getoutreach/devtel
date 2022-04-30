@@ -57,10 +57,10 @@ func TestCanProcessEvents(t *testing.T) {
 	r.Record(Event{Hook: "before:deploy", Timestamp: 2147483605})
 	r.Record(Event{Hook: "after:deploy", Timestamp: 2147483647})
 
-	assert.NoError(t, r.ProcessRecords())
+	assert.NoError(t, r.Flush())
 	assert.Len(t, p.lastBatch, 2)
 
-	assert.NoError(t, r.ProcessRecords())
+	assert.NoError(t, r.Flush())
 	assert.Len(t, p.lastBatch, 0)
 }
 
