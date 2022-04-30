@@ -20,18 +20,39 @@ type tracker struct {
 type Tracker interface {
 	Restore(io.Reader) error
 
-	Record(Event)
+	Track(Event)
 	Flush() error
 }
 
-func NewWithWriter(w io.Writer, p Processor) Tracker {
+func eventKey(e interface{}) string { return e.(Event).Hook }
+func restoreEvent(m map[string]interface{}) interface{} {
+	return Event{
+		Hook:      m["hook"].(string),
+		Timestamp: int64(m["timestamp"].(float64)),
+	}
+}
+
+type Options struct {
+	Store store.Store
+}
+
+func New(p Processor, opts *Options) Tracker {
+	if opts == nil {
+		opts = &Options{}
+	}
+	if opts.Store == nil {
+		opts.Store = store.New(eventKey, &store.Options{
+			RestoreConverter: restoreEvent,
+		})
+	}
+
 	return &tracker{
-		s: store.NewWithWriter(func(e interface{}) string { return e.(Event).Hook }, w),
+		s: opts.Store,
 		p: p,
 	}
 }
 
-func (t *tracker) Record(event Event) {
+func (t *tracker) Track(event Event) {
 	if before := t.tryGetBeforeHook(event.Hook); before != nil {
 		event = t.combineEvents(*before, event)
 	}
@@ -53,12 +74,7 @@ func (t *tracker) Flush() error {
 }
 
 func (t *tracker) Restore(reader io.Reader) error {
-	return t.s.Restore(reader, func(m map[string]interface{}) interface{} {
-		return Event{
-			Hook:      m["hook"].(string),
-			Timestamp: int64(m["timestamp"].(float64)),
-		}
-	})
+	return t.s.Restore(reader)
 }
 
 func (t *tracker) tryGetBeforeHook(name string) *Event {

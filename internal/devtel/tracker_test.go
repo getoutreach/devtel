@@ -1,18 +1,25 @@
 package devtel
 
 import (
-	"bytes"
+	"io"
 	"strings"
 	"testing"
 
+	"github.com/getoutreach/devtel/internal/store"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestEventWrittenToBuffer(t *testing.T) {
-	var buff bytes.Buffer
-	r := NewWithWriter(&buff, &testProcessor{})
+	var buff store.TestClosableBuffer
+	r := New(&testProcessor{}, &Options{
+		Store: store.New(eventKey, &store.Options{
+			OpenAppend: func(key string) (io.WriteCloser, error) {
+				return &buff, nil
+			},
+		}),
+	})
 
-	r.Record(Event{Hook: "before:deploy", Timestamp: 2147483605})
+	r.Track(Event{Hook: "before:deploy", Timestamp: 2147483605})
 
 	expected := `{"key":"before:deploy","data":{"hook":"before:deploy","timestamp":2147483605}}` + "\n"
 
@@ -20,11 +27,17 @@ func TestEventWrittenToBuffer(t *testing.T) {
 }
 
 func TestEventMatched(t *testing.T) {
-	var buff bytes.Buffer
-	r := NewWithWriter(&buff, &testProcessor{})
+	var buff store.TestClosableBuffer
+	r := New(&testProcessor{}, &Options{
+		Store: store.New(eventKey, &store.Options{
+			OpenAppend: func(key string) (io.WriteCloser, error) {
+				return &buff, nil
+			},
+		}),
+	})
 
-	r.Record(Event{Hook: "before:deploy", Timestamp: 2147483605})
-	r.Record(Event{Hook: "after:deploy", Timestamp: 2147483647})
+	r.Track(Event{Hook: "before:deploy", Timestamp: 2147483605})
+	r.Track(Event{Hook: "after:deploy", Timestamp: 2147483647})
 
 	expected := "" + // This makes it nicely arranged
 		`{"key":"before:deploy","data":{"hook":"before:deploy","timestamp":2147483605}}` + "\n" +
@@ -37,25 +50,38 @@ func TestCanRestoreFromReader(t *testing.T) {
 	f := strings.NewReader("" + // This makes it nicely arranged
 		`{"key":"before:deploy","data":{"hook":"before:deploy","timestamp":2147483646}}` + "\n")
 
-	var buff bytes.Buffer
-	r := NewWithWriter(&buff, &testProcessor{})
+	var buff store.TestClosableBuffer
+	p := &testProcessor{}
+	s := store.New(eventKey, &store.Options{
+		RestoreConverter: restoreEvent,
+		OpenAppend: func(key string) (io.WriteCloser, error) {
+			return &buff, nil
+		},
+	})
+	r := New(p, &Options{Store: s})
 
 	if err := r.Restore(f); err != nil {
 		t.Error(err)
 	}
-	r.Record(Event{Hook: "after:deploy", Timestamp: 2147483647})
+	r.Track(Event{Hook: "after:deploy", Timestamp: 2147483647})
 
 	expected := `{"key":"after:deploy","data":{"hook":"after:deploy","timestamp":2147483647,"duration_ms":1}}` + "\n"
 	assert.Equal(t, expected, buff.String())
 }
 
 func TestCanProcessEvents(t *testing.T) {
-	var buff bytes.Buffer
+	var buff store.TestClosableBuffer
 	p := &testProcessor{}
-	r := NewWithWriter(&buff, p)
+	s := store.New(eventKey, &store.Options{
+		RestoreConverter: restoreEvent,
+		OpenAppend: func(key string) (io.WriteCloser, error) {
+			return &buff, nil
+		},
+	})
+	r := New(p, &Options{Store: s})
 
-	r.Record(Event{Hook: "before:deploy", Timestamp: 2147483605})
-	r.Record(Event{Hook: "after:deploy", Timestamp: 2147483647})
+	r.Track(Event{Hook: "before:deploy", Timestamp: 2147483605})
+	r.Track(Event{Hook: "after:deploy", Timestamp: 2147483647})
 
 	assert.NoError(t, r.Flush())
 	assert.Len(t, p.lastBatch, 2)

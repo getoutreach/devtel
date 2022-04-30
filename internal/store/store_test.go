@@ -1,7 +1,7 @@
 package store
 
 import (
-	"bytes"
+	"io"
 	"strings"
 	"testing"
 
@@ -13,11 +13,28 @@ type payload struct {
 	Content string `json:"content,omitempty"`
 }
 
+func payloadID(data interface{}) string {
+	return data.(payload).ID
+}
+
+func restorePayload(m map[string]interface{}) interface{} {
+	return payload{
+		ID:      m["id"].(string),
+		Content: m["content"].(string),
+	}
+}
+
+func openAppender(buff *TestClosableBuffer) func(path string) (io.WriteCloser, error) {
+	return func(path string) (io.WriteCloser, error) {
+		return buff, nil
+	}
+}
+
 func TestStoreAppend(t *testing.T) {
-	var buff bytes.Buffer
-	s := NewWithWriter(func(val interface{}) string {
-		return val.(payload).ID
-	}, &buff)
+	var buff TestClosableBuffer
+	s := New(payloadID, &Options{
+		OpenAppend: openAppender(&buff),
+	})
 
 	assert.Nil(t, s.Append(payload{ID: "id1"}))
 	assert.Nil(t, s.Append(payload{ID: "id2"}))
@@ -30,10 +47,10 @@ func TestStoreAppend(t *testing.T) {
 }
 
 func TestStoreGet(t *testing.T) {
-	var buff bytes.Buffer
-	s := NewWithWriter(func(val interface{}) string {
-		return val.(payload).ID
-	}, &buff)
+	var buff TestClosableBuffer
+	s := New(payloadID, &Options{
+		OpenAppend: openAppender(&buff),
+	})
 
 	assert.Nil(t, s.Append(payload{ID: "id1"}))
 	assert.Nil(t, s.Append(payload{ID: "id2"}))
@@ -45,10 +62,10 @@ func TestStoreGet(t *testing.T) {
 }
 
 func TestStoreGetAll(t *testing.T) {
-	var buff bytes.Buffer
-	s := NewWithWriter(func(val interface{}) string {
-		return val.(payload).ID
-	}, &buff)
+	var buff TestClosableBuffer
+	s := New(payloadID, &Options{
+		OpenAppend: openAppender(&buff),
+	})
 
 	assert.Nil(t, s.Append(payload{ID: "id1"}))
 	assert.Nil(t, s.Append(payload{ID: "id2"}))
@@ -62,10 +79,10 @@ func TestStoreGetAll(t *testing.T) {
 }
 
 func TestStoreGetUnprocessed(t *testing.T) {
-	var buff bytes.Buffer
-	s := NewWithWriter(func(val interface{}) string {
-		return val.(payload).ID
-	}, &buff)
+	var buff TestClosableBuffer
+	s := New(payloadID, &Options{
+		OpenAppend: openAppender(&buff),
+	})
 
 	assert.Nil(t, s.Append(payload{ID: "id1"}))
 	assert.Nil(t, s.Append(payload{ID: "id2"}))
@@ -87,22 +104,18 @@ func TestStoreGetUnprocessed(t *testing.T) {
 }
 
 func TestRestore(t *testing.T) {
-	var buff bytes.Buffer
-	s := NewWithWriter(func(val interface{}) string {
-		return val.(payload).ID
-	}, &buff)
+	var buff TestClosableBuffer
+	s := New(payloadID, &Options{
+		OpenAppend:       openAppender(&buff),
+		RestoreConverter: restorePayload,
+	})
 
 	r := strings.NewReader("" +
 		`{"key":"id1","data":{"id":"id1","content":"content1"}}` + "\n" +
 		`{"key":"id1","data":{"id":"id1","content":"content42"}}` + "\n" +
 		`{"key":"id2","data":{"id":"id2","content":"content2"}}` + "\n")
 
-	s.Restore(r, func(m map[string]interface{}) interface{} {
-		return payload{
-			ID:      m["id"].(string),
-			Content: m["content"].(string),
-		}
-	})
+	s.Restore(r)
 
 	val := s.Get("id1")
 	assert.NotNil(t, val)

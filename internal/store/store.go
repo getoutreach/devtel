@@ -2,8 +2,13 @@ package store
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
+	"io/fs"
+	"os"
+	"path/filepath"
 	"sort"
+	"time"
 )
 
 type entry struct {
@@ -13,6 +18,8 @@ type entry struct {
 }
 
 type Store interface {
+	Init() error
+
 	Append(value interface{}) error
 
 	Get(key string) interface{}
@@ -20,24 +27,88 @@ type Store interface {
 	GetUnprocessed() []interface{}
 
 	MarkProcessed([]interface{}) error
-	Restore(r io.Reader, caster func(map[string]interface{}) interface{}) error
+	Restore(r io.Reader) error
 }
 
 type store struct {
-	w       io.Writer
-	encoder *json.Encoder
+	logDir     string
+	logPath    string
+	logFS      fs.FS
+	openAppend func(path string) (io.WriteCloser, error)
+
 	entries []entry
 	index   map[string]int
 
-	key func(interface{}) string
+	extractKey       func(interface{}) string
+	restoreConverter func(map[string]interface{}) interface{}
 }
 
-func NewWithWriter(key func(interface{}) string, w io.Writer) Store {
-	return &store{
-		key:     key,
-		w:       w,
-		encoder: json.NewEncoder(w),
+type Options struct {
+	LogDir     string
+	LogFS      fs.FS
+	OpenAppend func(path string) (io.WriteCloser, error)
+
+	RestoreConverter func(map[string]interface{}) interface{}
+}
+
+func New(extractKey func(interface{}) string, opts *Options) Store {
+	if opts.LogDir == "" {
+		opts.LogDir = filepath.Join(os.TempDir(), "devtel")
 	}
+
+	if opts.LogFS == nil {
+		opts.LogFS = os.DirFS(opts.LogDir)
+	}
+
+	if opts.OpenAppend == nil {
+		opts.OpenAppend = func(path string) (io.WriteCloser, error) {
+			return os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+		}
+	}
+
+	return &store{
+		logDir:     opts.LogDir,
+		logFS:      opts.LogFS,
+		openAppend: opts.OpenAppend,
+
+		extractKey:       extractKey,
+		restoreConverter: opts.RestoreConverter,
+	}
+}
+
+func (s *store) Init() error {
+	err := fs.WalkDir(s.logFS, ".", func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			return nil
+		}
+
+		f, err := s.logFS.Open(path)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+
+		if err := s.Restore(f); err != nil {
+			return err
+		}
+
+		s.logPath = filepath.Join(s.logDir, path)
+
+		return nil
+	})
+
+	if err != nil {
+		return err
+	}
+
+	if s.logPath == "" {
+		s.logPath = filepath.Join(s.logDir, fmt.Sprintf("%d.log", time.Now().Unix()))
+	}
+
+	return nil
 }
 
 func (s *store) Append(value interface{}) error {
@@ -45,10 +116,22 @@ func (s *store) Append(value interface{}) error {
 }
 
 func (s *store) append(value interface{}, processed bool) error {
-	e := entry{s.key(value), value, processed}
-	if err := s.encoder.Encode(e); err != nil {
+	e := entry{s.extractKey(value), value, processed}
+	b, err := json.Marshal(e)
+	if err != nil {
 		return err
 	}
+	f, err := s.openAppend(s.logPath)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	_, err = fmt.Fprintln(f, string(b))
+	if err != nil {
+		return err
+	}
+
 	s.appendEntry(e)
 
 	return nil
@@ -112,7 +195,7 @@ func (s *store) MarkProcessed(recs []interface{}) error {
 	return nil
 }
 
-func (s *store) Restore(r io.Reader, caster func(val map[string]interface{}) interface{}) error {
+func (s *store) Restore(r io.Reader) error {
 	dec := json.NewDecoder(r)
 
 	for dec.More() {
@@ -121,7 +204,11 @@ func (s *store) Restore(r io.Reader, caster func(val map[string]interface{}) int
 			return err
 		}
 		// JSON transforms into map[string]interface{}
-		e.Data = caster(e.Data.(map[string]interface{}))
+		if s.restoreConverter != nil {
+			e.Data = s.restoreConverter(e.Data.(map[string]interface{}))
+		} else {
+			e.Data = e.Data.(map[string]interface{})
+		}
 
 		s.appendEntry(e)
 	}
