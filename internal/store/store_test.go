@@ -111,5 +111,3 @@ func TestRestore(t *testing.T) {
 	val = s.Get("id3")
 	assert.Nil(t, val)
 }
-
-//

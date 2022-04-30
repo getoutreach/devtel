@@ -63,5 +63,3 @@ func TestCanProcessEvents(t *testing.T) {
 	assert.NoError(t, r.Flush())
 	assert.Len(t, p.lastBatch, 0)
 }
-
-//
