@@ -28,7 +28,6 @@ type Store interface {
 	GetUnprocessed() []interface{}
 
 	MarkProcessed([]interface{}) error
-	Restore(r io.Reader) error
 }
 
 type store struct {
@@ -98,7 +97,7 @@ func (s *store) Init() error {
 		defer f.Close()
 
 		log.Printf("Restoring log file: %s\n", filepath.Join(s.logDir, path))
-		if err := s.Restore(f); err != nil {
+		if err := s.restore(f); err != nil {
 			return err
 		}
 
@@ -214,7 +213,7 @@ func (s *store) MarkProcessed(recs []interface{}) error {
 	return nil
 }
 
-func (s *store) Restore(r io.Reader) error {
+func (s *store) restore(r io.Reader) error {
 	log.Printf("Restore\n")
 
 	dec := json.NewDecoder(r)
