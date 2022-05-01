@@ -2,7 +2,6 @@ package devspace
 
 import (
 	"fmt"
-	"io"
 	"log"
 
 	"github.com/getoutreach/devtel/internal/store"
@@ -73,10 +72,6 @@ func (t *tracker) Flush() error {
 	}
 
 	return t.s.MarkProcessed(events)
-}
-
-func (t *tracker) Restore(reader io.Reader) error {
-	return t.s.Restore(reader)
 }
 
 func (t *tracker) tryGetBeforeHook(event *Event) *Event {

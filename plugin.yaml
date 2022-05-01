@@ -5,7 +5,6 @@ version: 0.0.1
 # TODO: Add common properties (like the ones we are sending for CLI)
 # TODO: Figure out versioning, deployment, and downloading releases.
 # TODO: Delete old log files
-# TODO: Move tracker creation to the main and pass it into cmd
 
 hooks:
   - event: before:build

@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"regexp"
 	"testing"
 
 	"github.com/urfave/cli/v2"
@@ -23,8 +24,10 @@ func TestTrackEvent(t *testing.T) {
 		b, err := io.ReadAll(r.Body)
 		assert.NoError(t, err)
 
-		//nolint:lll // Why: Comparing actual value, the string is long.
-		assert.Regexp(t, `^[{"event_name":"devspace_hook_event","hook":"before:build","execution_id":"031cb474-c2f4-433f-863e-684c35c8d5ac","status":"info","command":{"name":"deploy","line":"devspace deploy [flags]","flags":["--namespace","yoda--bento1a","--no-warn"]},"timestamp":\d+}]$`, string(b))
+		//nolint // Why: Comparing actual value, the string is long.
+		pattern, err := regexp.Compile(`^\[{"event":"devspace_hook","hook":"before:build","execution_id":"031cb474-c2f4-433f-863e-684c35c8d5ac","status":"info","command":{"name":"deploy","line":"devspace deploy \[flags\]","flags":\["--namespace","yoda--bento1a","--no-warn"\]},"timestamp":\d+}\]$`)
+		assert.NoError(t, err)
+		assert.Regexp(t, pattern, string(b))
 
 		w.WriteHeader(http.StatusCreated)
 	}))

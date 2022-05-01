@@ -58,6 +58,7 @@ func TestInit(t *testing.T) {
 
 	assert.NotNil(t, s.Get("before:deploy"))
 	assert.NotNil(t, s.Get("after:deploy"))
+	assert.Nil(t, s.Get("after:build"))
 }
 
 func TestAppendOpener(t *testing.T) {
