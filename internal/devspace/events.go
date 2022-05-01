@@ -71,9 +71,9 @@ type Command struct {
 }
 
 type Event struct {
-	Name string `json:"event_name"`
+	Name string `json:"event,omitempty"`
 
-	Hook string `json:"hook"`
+	Hook string `json:"hook,omitempty"`
 
 	ExecutionID string `json:"execution_id,omitempty"`
 
@@ -162,7 +162,7 @@ func EventFromEnv() *Event {
 	}
 
 	return &Event{
-		Name:        "devspace_hook_event",
+		Name:        "devspace_hook",
 		Hook:        os.Getenv("DEVSPACE_PLUGIN_EVENT"),
 		ExecutionID: os.Getenv("DEVSPACE_PLUGIN_EXECUTION_ID"),
 		Error:       errMsg,

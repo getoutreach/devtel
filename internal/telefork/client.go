@@ -14,7 +14,7 @@ type Client struct {
 	baseURL string
 }
 
-func NewClient(apiKey, appName string) *Client {
+func NewClient(appName, apiKey string) *Client {
 	return NewClientWithHTTPClient(appName, apiKey, http.DefaultClient)
 }
 

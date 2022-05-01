@@ -64,6 +64,7 @@ func (t *tracker) Track(event *Event) {
 }
 
 func (t *tracker) Flush() error {
+	log.Println("Flush")
 	events := t.s.GetUnprocessed()
 
 	err := t.p.ProcessRecords(events)
