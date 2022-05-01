@@ -2,7 +2,6 @@ package track
 
 import (
 	"encoding/json"
-	"log"
 	"os"
 
 	"github.com/urfave/cli/v2"
@@ -11,14 +10,12 @@ import (
 	"github.com/getoutreach/devtel/internal/telefork"
 )
 
-func NewCmd(appName, teleforkAPIKey string) *cli.Command {
+func NewCmd(teleforkAPIKey string) *cli.Command {
 	return &cli.Command{
 		Name:  "track",
 		Usage: "Track events",
 		Action: func(c *cli.Context) error {
-			log.Println("Starting devtel track")
-
-			t := devspace.NewTracker(telefork.NewProcessor(appName, teleforkAPIKey))
+			t := devspace.NewTracker(telefork.NewProcessor(c.App.Name, teleforkAPIKey))
 			if err := t.Init(); err != nil {
 				panic(err)
 			}

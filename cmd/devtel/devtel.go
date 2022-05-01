@@ -57,7 +57,7 @@ func main() {
 	}
 	app.Commands = []*cli.Command{
 		///Block(commands)
-		track.NewCmd(app.Name, TeleforkAPIKey),
+		track.NewCmd(TeleforkAPIKey),
 		///EndBlock(commands)
 	}
 
