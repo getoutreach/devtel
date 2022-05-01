@@ -11,7 +11,7 @@ import (
 )
 
 var beforeEvent = `{
-	"event_name: "devspace_hook_event",
+	"event": "devspace_hook",
 	"hook": "before:deploy",
 	"execution_id": "9714f00a-b998-49e7-97a9-a8e2051905f7",
 	"status": "info",
@@ -24,16 +24,14 @@ var beforeEvent = `{
 			"--namespace",
 			"force--bento1a",
 			"--no-warn",
-			"true",
-			"--var",
-			"[IMAGE_REGISTRY=us-docker.pkg.dev/outreach-docker/outreach-devenv/plisy-devenv]"
+			"true"
 		]
 	},
 	"timestamp": 1651388142703
 }`
 
 var afterEvent = `{
-	"event_name: "devspace_hook_event",
+	"event": "devspace_hook",
 	"hook": "after:deploy",
 	"execution_id": "9714f00a-b998-49e7-97a9-a8e2051905f7",
 	"status": "info",
@@ -46,9 +44,7 @@ var afterEvent = `{
 			"--namespace",
 			"force--bento1a",
 			"--no-warn",
-			"true",
-			"--var",
-			"[IMAGE_REGISTRY=us-docker.pkg.dev/outreach-docker/outreach-devenv/plisy-devenv]"
+			"true"
 		]
 	},
 	"timestamp": 1651388151749

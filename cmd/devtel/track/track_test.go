@@ -15,7 +15,7 @@ import (
 
 func TestTrackEvent(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, "testApp", r.Header.Get("X-OUTREACH-CLIENT-APP-ID"))
+		assert.Equal(t, "devtel", r.Header.Get("X-OUTREACH-CLIENT-APP-ID"))
 		assert.Equal(t, "testKey", r.Header.Get("X-OUTREACH-CLIENT-LOGGING"))
 
 		defer r.Body.Close()
@@ -44,7 +44,7 @@ func TestTrackEvent(t *testing.T) {
 	app := &cli.App{
 		Name: "devtel",
 		Commands: []*cli.Command{
-			track.NewCmd("testApp", "testKey"),
+			track.NewCmd("testKey"),
 		},
 	}
 
