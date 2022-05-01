@@ -1,4 +1,4 @@
-package devtel
+package devspace
 
 import (
 	"testing"

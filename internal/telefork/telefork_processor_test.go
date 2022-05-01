@@ -1,4 +1,4 @@
-package devtel
+package telefork
 
 import (
 	"io"
@@ -7,7 +7,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/getoutreach/devtel/internal/telefork"
+	"github.com/getoutreach/devtel/internal/devspace"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -28,13 +28,13 @@ func TestTeleforkProcessor(t *testing.T) {
 	defer server.Close()
 
 	os.Setenv("OUTREACH_TELEFORK_ENDPOINT", server.URL)
-	client := telefork.NewClientWithHTTPClient("testApp", "testKey", server.Client())
+	client := NewClientWithHTTPClient("testApp", "testKey", server.Client())
 
-	tp := &teleforkProcessor{
+	tp := &Processor{
 		client: client,
 	}
 
 	tp.ProcessRecords([]interface{}{
-		Event{Hook: "before:deploy", Timestamp: 2147483605},
+		devspace.Event{Hook: "before:deploy", Timestamp: 2147483605},
 	})
 }

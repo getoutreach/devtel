@@ -15,11 +15,7 @@ type Client struct {
 }
 
 func NewClient(apiKey, appName string) *Client {
-	return &Client{
-		http: &http.Client{
-			Transport: NewTransport(apiKey, appName, nil),
-		},
-	}
+	return NewClientWithHTTPClient(appName, apiKey, http.DefaultClient)
 }
 
 func NewClientWithHTTPClient(appName, apiKey string, client *http.Client) *Client {

@@ -7,10 +7,9 @@ import (
 	"os"
 	"testing"
 
+	"github.com/getoutreach/devtel/internal/devspace"
 	"github.com/stretchr/testify/assert"
 )
-
-type Event map[string]interface{}
 
 func TestClientSendsEvents(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -31,7 +30,7 @@ func TestClientSendsEvents(t *testing.T) {
 	os.Setenv("OUTREACH_TELEFORK_ENDPOINT", server.URL)
 	client := NewClientWithHTTPClient("testApp", "testKey", server.Client())
 	err := client.SendEvents([]interface{}{
-		Event{"hook": "before:deploy", "timestamp": 2147483605},
+		devspace.Event{Hook: "before:deploy", Timestamp: 2147483605},
 	})
 	assert.NoError(t, err)
 }

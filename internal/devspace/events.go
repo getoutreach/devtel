@@ -1,6 +1,12 @@
-package devtel
+package devspace
 
-import "strings"
+import (
+	"encoding/json"
+	"fmt"
+	"os"
+	"strings"
+	"time"
+)
 
 // hookCombinations is a list of all interesting start, end event combinations.
 // it's not an exhaustive list of hooks, but it has the ones that are in pairs (except plugin ones).
@@ -55,4 +61,120 @@ func getBeforeHook(hook string) string {
 	}
 
 	return ""
+}
+
+type Command struct {
+	Name  string   `json:"name"`
+	Line  string   `json:"line"`
+	Flags []string `json:"flags,omitempty"`
+	Args  []string `json:"args,omitempty"`
+}
+
+type Event struct {
+	Name string `json:"event_name"`
+
+	Hook string `json:"hook"`
+
+	ExecutionID string `json:"execution_id,omitempty"`
+
+	Error  string `json:"error,omitempty"`
+	Status string `json:"status,omitempty"`
+
+	Command *Command `json:"command,omitempty"`
+
+	Timestamp int64 `json:"timestamp"`
+	Duration  int64 `json:"duration_ms,omitempty"`
+}
+
+func eventKey(e interface{}) string {
+	event := e.(*Event)
+	if event.ExecutionID == "" {
+		return event.Hook
+	}
+
+	return fmt.Sprintf("%s_%s", e.(*Event).ExecutionID, e.(*Event).Hook)
+}
+func eventFromMap(m map[string]interface{}) interface{} {
+	var event Event
+
+	if val, ok := m["event_name"]; ok {
+		event.Name = val.(string)
+	}
+	if val, ok := m["hook"]; ok {
+		event.Hook = val.(string)
+	}
+	if val, ok := m["execution_id"]; ok {
+		event.ExecutionID = val.(string)
+	}
+
+	if val, ok := m["error"]; ok {
+		event.Error = val.(string)
+	}
+	if val, ok := m["status"]; ok {
+		event.Status = val.(string)
+	}
+
+	if val, ok := m["command"]; ok {
+		if cmd, ok := val.(map[string]interface{}); ok {
+			event.Command = &Command{}
+			if val, ok := cmd["name"]; ok {
+				event.Command.Name = val.(string)
+			}
+			if val, ok := cmd["line"]; ok {
+				event.Command.Line = val.(string)
+			}
+			if val, ok := cmd["flags"]; ok {
+				for _, flag := range val.([]interface{}) {
+					event.Command.Flags = append(event.Command.Flags, flag.(string))
+				}
+			}
+			if val, ok := cmd["args"]; ok {
+				for _, arg := range val.([]interface{}) {
+					event.Command.Args = append(event.Command.Args, arg.(string))
+				}
+			}
+		}
+	}
+
+	if val, ok := m["timestamp"]; ok {
+		event.Timestamp = int64(val.(float64))
+	}
+	if val, ok := m["duration_ms"]; ok {
+		event.Duration = int64(val.(float64))
+	}
+
+	return &event
+}
+
+func EventFromEnv() *Event {
+	var flags, args []string
+
+	//nolint:errcheck // Why: There's not much we can do about this. We still want the rest.
+	json.Unmarshal([]byte(os.Getenv("DEVSPACE_PLUGIN_COMMAND_FLAGS")), &flags)
+
+	//nolint:errcheck // Why: There's not much we can do about this. We still want the rest.
+	json.Unmarshal([]byte(os.Getenv("DEVSPACE_PLUGIN_COMMAND_ARGS")), &args)
+
+	errMsg := os.Getenv("DEVSPACE_PLUGIN_ERROR")
+	status := "info"
+	if errMsg != "" {
+		status = "error"
+	}
+
+	return &Event{
+		Name:        "devspace_hook_event",
+		Hook:        os.Getenv("DEVSPACE_PLUGIN_EVENT"),
+		ExecutionID: os.Getenv("DEVSPACE_PLUGIN_EXECUTION_ID"),
+		Error:       errMsg,
+		Status:      status,
+
+		Command: &Command{
+			Name:  os.Getenv("DEVSPACE_PLUGIN_COMMAND"),
+			Line:  os.Getenv("DEVSPACE_PLUGIN_COMMAND_LINE"),
+			Flags: flags,
+			Args:  args,
+		},
+
+		Timestamp: time.Now().UnixMilli(),
+	}
 }

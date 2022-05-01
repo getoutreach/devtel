@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"log"
 	"os"
 	"path/filepath"
 	"sort"
@@ -56,6 +57,9 @@ func New(extractKey func(interface{}) string, opts *Options) Store {
 		opts.LogDir = filepath.Join(os.TempDir(), "devtel")
 	}
 
+	//nolint
+	os.MkdirAll(opts.LogDir, 0o755)
+
 	if opts.LogFS == nil {
 		opts.LogFS = os.DirFS(opts.LogDir)
 	}
@@ -85,16 +89,20 @@ func (s *store) Init() error {
 			return nil
 		}
 
+		log.Printf("Found log file: %s\n", filepath.Join(s.logDir, path))
+
 		f, err := s.logFS.Open(path)
 		if err != nil {
 			return err
 		}
 		defer f.Close()
 
+		log.Printf("Restoring log file: %s\n", filepath.Join(s.logDir, path))
 		if err := s.Restore(f); err != nil {
 			return err
 		}
 
+		log.Printf("Setting log file: %s\n", filepath.Join(s.logDir, path))
 		s.logPath = filepath.Join(s.logDir, path)
 
 		return nil
@@ -106,12 +114,15 @@ func (s *store) Init() error {
 
 	if s.logPath == "" {
 		s.logPath = filepath.Join(s.logDir, fmt.Sprintf("%d.log", time.Now().Unix()))
+		log.Printf("Setting log file: %s\n", filepath.Join(s.logDir, s.logPath))
 	}
 
 	return nil
 }
 
 func (s *store) Append(value interface{}) error {
+	log.Printf("Append: %s\n", s.extractKey(value))
+
 	return s.append(value, false)
 }
 
@@ -146,6 +157,8 @@ func (s *store) appendEntry(e entry) {
 }
 
 func (s *store) Get(key string) interface{} {
+	log.Printf("Get: %s\n", key)
+
 	if i, ok := s.index[key]; ok {
 		return s.entries[i].Data
 	}
@@ -153,6 +166,8 @@ func (s *store) Get(key string) interface{} {
 }
 
 func (s *store) GetAll() []interface{} {
+	log.Printf("GetAll\n")
+
 	indexes := make([]int, 0, len(s.entries))
 	for _, index := range s.index {
 		indexes = append(indexes, index)
@@ -168,6 +183,8 @@ func (s *store) GetAll() []interface{} {
 }
 
 func (s *store) GetUnprocessed() []interface{} {
+	log.Printf("GetUnprocessed\n")
+
 	indexes := make([]int, 0, len(s.entries))
 	for _, index := range s.index {
 		indexes = append(indexes, index)
@@ -186,6 +203,8 @@ func (s *store) GetUnprocessed() []interface{} {
 }
 
 func (s *store) MarkProcessed(recs []interface{}) error {
+	log.Printf("MarkProcessed\n")
+
 	for _, rec := range recs {
 		if err := s.append(rec, true); err != nil {
 			return err
@@ -196,6 +215,8 @@ func (s *store) MarkProcessed(recs []interface{}) error {
 }
 
 func (s *store) Restore(r io.Reader) error {
+	log.Printf("Restore\n")
+
 	dec := json.NewDecoder(r)
 
 	for dec.More() {
@@ -203,6 +224,14 @@ func (s *store) Restore(r io.Reader) error {
 		if err := dec.Decode(&e); err != nil {
 			return err
 		}
+
+		if e.Key == "" {
+			continue
+		}
+		if e.Data == nil {
+			continue
+		}
+
 		// JSON transforms into map[string]interface{}
 		if s.restoreConverter != nil {
 			e.Data = s.restoreConverter(e.Data.(map[string]interface{}))

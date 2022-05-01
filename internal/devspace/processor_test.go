@@ -1,4 +1,4 @@
-package devtel
+package devspace
 
 type testProcessor struct {
 	lastBatch []interface{}

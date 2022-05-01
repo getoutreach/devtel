@@ -9,6 +9,7 @@ package main
 import (
 	"context"
 
+	"github.com/getoutreach/devtel/cmd/devtel/track"
 	oapp "github.com/getoutreach/gobox/pkg/app"
 	gcli "github.com/getoutreach/gobox/pkg/cli"
 	"github.com/sirupsen/logrus"
@@ -56,6 +57,7 @@ func main() {
 	}
 	app.Commands = []*cli.Command{
 		///Block(commands)
+		track.NewCmd(app.Name, TeleforkAPIKey),
 		///EndBlock(commands)
 	}
 
