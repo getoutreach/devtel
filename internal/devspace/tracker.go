@@ -1,3 +1,7 @@
+// Copyright 2022 Outreach Corporation. All Rights Reserved.
+
+// Description: This file contains the logic for matching devspace hooks across CLI runs.
+
 package devspace
 
 import (
@@ -8,6 +12,7 @@ import (
 	"github.com/getoutreach/gobox/pkg/trace"
 )
 
+// eventBag is internal tracked data bag data from store.
 type eventBag map[string]interface{}
 
 func (b eventBag) MarshalRecord(addField func(name string, value interface{})) {
@@ -19,6 +24,7 @@ func (b eventBag) MarshalRecord(addField func(name string, value interface{})) {
 	}
 }
 
+// Key returns the key for the event (in eventBag).
 func (b eventBag) Key() string {
 	var key string
 
@@ -41,11 +47,14 @@ func (b eventBag) UnmarshalRecord(data map[string]interface{}) error {
 	return nil
 }
 
+// tracker is responsible for matching events, calculating durations and storing the data in a store.
+// It also handles the processing of the events on Flush.
 type tracker struct {
 	s store.Store
 	p Processor
 }
 
+// Tracker is the entry interface into event tracking, matching and processing.
 type Tracker interface {
 	Init(context.Context) error
 
@@ -55,10 +64,12 @@ type Tracker interface {
 	Flush(context.Context) error
 }
 
+// Options are the options for configuring the tracker.
 type Options struct {
 	Store store.Store
 }
 
+// NewTracker creates a new tracker.
 func NewTracker(p Processor, opts ...func(*Options)) Tracker {
 	o := &Options{}
 	for _, opt := range opts {
@@ -75,12 +86,14 @@ func NewTracker(p Processor, opts ...func(*Options)) Tracker {
 	}
 }
 
+// WithStore provides the store for the tracker.
 func WithStore(s store.Store) func(opts *Options) {
 	return func(opts *Options) {
 		opts.Store = s
 	}
 }
 
+// Init intializes the store.
 func (t *tracker) Init(ctx context.Context) error {
 	ctx = trace.StartCall(ctx, "tracker.Init")
 	defer trace.EndCall(ctx)
@@ -88,10 +101,12 @@ func (t *tracker) Init(ctx context.Context) error {
 	return trace.SetCallStatus(ctx, t.s.Init(ctx))
 }
 
+// AddDefaultField adds a default field to be added the event.
 func (t *tracker) AddDefaultField(k string, v interface{}) {
 	t.s.AddDefaultField(k, v)
 }
 
+// Track stores and matches an event.
 func (t *tracker) Track(ctx context.Context, event *Event) {
 	ctx = trace.StartCall(ctx, "tracker.Track")
 	defer trace.EndCall(ctx)
@@ -106,6 +121,7 @@ func (t *tracker) Track(ctx context.Context, event *Event) {
 	}
 }
 
+// Flush processes the events in the store.
 func (t *tracker) Flush(ctx context.Context) error {
 	ctx = trace.StartCall(ctx, "tracker.Flush")
 	defer trace.EndCall(ctx)
@@ -133,6 +149,7 @@ func (t *tracker) Flush(ctx context.Context) error {
 	return trace.SetCallStatus(ctx, t.s.MarkProcessed(ctx, events))
 }
 
+// tryGetBeforeHook tries to get the before hook event for given event.
 func (t *tracker) tryGetBeforeHook(ctx context.Context, event *Event) *Event {
 	beforeHook := getBeforeHook(event.Hook)
 	if beforeHook == "" {
@@ -151,6 +168,7 @@ func (t *tracker) tryGetBeforeHook(ctx context.Context, event *Event) *Event {
 	return &val
 }
 
+// combineEvents calculates the duration and sets it on the after event.
 func (*tracker) combineEvents(before, after *Event) *Event {
 	after.Duration = after.Timestamp - before.Timestamp
 

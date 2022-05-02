@@ -1,3 +1,7 @@
+// Copyright 2022 Outreach Corporation. All Rights Reserved.
+
+// Description: This file contains the Telefork client.
+
 package telefork
 
 import (
@@ -12,15 +16,18 @@ import (
 	"github.com/getoutreach/gobox/pkg/trace"
 )
 
+// Client is the Telefork Service client.
 type Client struct {
 	http    *http.Client
 	baseURL string
 }
 
+// NewClient returns a new Telefork client.
 func NewClient(appName, apiKey string) *Client {
 	return NewClientWithHTTPClient(appName, apiKey, http.DefaultClient)
 }
 
+// NewClientWithHTTPClient returns a new Telefork client with the given HTTP client.
 func NewClientWithHTTPClient(appName, apiKey string, client *http.Client) *Client {
 	baseURL := "https://telefork.outreach.io/"
 	if os.Getenv("OUTREACH_TELEFORK_ENDPOINT") != "" {
@@ -34,6 +41,7 @@ func NewClientWithHTTPClient(appName, apiKey string, client *http.Client) *Clien
 	}
 }
 
+// SendEvents sends the given events to Telefork.
 func (c *Client) SendEvents(ctx context.Context, events []interface{}) error {
 	ctx = trace.StartCall(ctx, "telefork.Client.SendEvents")
 	defer trace.EndCall(ctx)
@@ -61,6 +69,7 @@ func (c *Client) SendEvents(ctx context.Context, events []interface{}) error {
 	return trace.SetCallStatus(ctx, nil)
 }
 
+// Transport is an http.RoundTripper that adds the X-OUTREACH-CLIENT-APP-ID and X-OUTREACH-CLIENT-LOGGING headers.
 type Transport struct {
 	appName string
 	apiKey  string
@@ -68,6 +77,7 @@ type Transport struct {
 	original http.RoundTripper
 }
 
+// NewTransport returns a new Transport.
 func NewTransport(appName, apiKey string, rt http.RoundTripper) *Transport {
 	return &Transport{
 		appName: appName,
@@ -77,6 +87,7 @@ func NewTransport(appName, apiKey string, rt http.RoundTripper) *Transport {
 	}
 }
 
+// RoundTrip implements http.RoundTripper.
 func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 	rt := t.original
 	if rt == nil {

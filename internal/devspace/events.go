@@ -1,3 +1,10 @@
+// Copyright 2022 Outreach Corporation. All Rights Reserved.
+
+// Description: This file contains
+// - devspace hook combinations
+// - Event marshalling and unmarshalling.
+// - env variables scraping for devspace details.
+
 package devspace
 
 import (
@@ -63,6 +70,7 @@ func getBeforeHook(hook string) string {
 	return ""
 }
 
+// Command contains the details about devspace command that triggered the event.
 type Command struct {
 	Name  string   `json:"name"`
 	Line  string   `json:"line"`
@@ -70,6 +78,7 @@ type Command struct {
 	Args  []string `json:"args,omitempty"`
 }
 
+// Event contains the details about the devspace hook event.
 type Event struct {
 	Name string `json:"event,omitempty"`
 
@@ -87,6 +96,7 @@ type Event struct {
 	Duration     int64     `json:"duration_ms,omitempty"`
 }
 
+// Key returns the key for the event index.
 func (e *Event) Key() string {
 	if e.ExecutionID == "" {
 		return e.Hook
@@ -95,6 +105,7 @@ func (e *Event) Key() string {
 	return fmt.Sprintf("%s_%s", e.ExecutionID, e.Hook)
 }
 
+// MarshalRecord adds the event data to the target data structure (map most likely).
 func (e *Event) MarshalRecord(addField func(name string, value interface{})) {
 	addField("event", e.Name)
 	addField("hook", e.Hook)
@@ -125,6 +136,7 @@ func (e *Event) MarshalRecord(addField func(name string, value interface{})) {
 	}
 }
 
+// UnmarshalRecord unmarshals the event data from the map into Event.
 func (e *Event) UnmarshalRecord(data map[string]interface{}) error {
 	b, err := json.Marshal(data)
 	if err != nil {
@@ -134,6 +146,7 @@ func (e *Event) UnmarshalRecord(data map[string]interface{}) error {
 	return json.Unmarshal(b, e)
 }
 
+// EventFromEnv scrapes the event data from the environment variables.
 func EventFromEnv() *Event {
 	var flags, args []string
 

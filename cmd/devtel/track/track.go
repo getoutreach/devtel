@@ -1,3 +1,9 @@
+// Copyright 2022 Outreach Corporation. All Rights Reserved.
+
+// Description: This file contains the package documentation and track command implementation.
+
+// Package track contains the track command.
+// When executed, it will try to match current hook call with a matching before: hook, add duration, and send it to Telefork.
 package track
 
 import (
@@ -45,7 +51,8 @@ func commonProps() map[string]interface{} {
 	return commonProps
 }
 
-func NewCmd(teleforkAPIKey string) *cli.Command {
+// NewCommand returns a new track command.
+func NewCommand(teleforkAPIKey string) *cli.Command {
 	return &cli.Command{
 		Name:  "track",
 		Usage: "Track events",

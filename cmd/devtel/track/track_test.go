@@ -53,7 +53,7 @@ func TestTrackEvent(t *testing.T) {
 	app := &cli.App{
 		Name: "devtel",
 		Commands: []*cli.Command{
-			track.NewCmd("testKey"),
+			track.NewCommand("testKey"),
 		},
 	}
 

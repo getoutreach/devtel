@@ -1,3 +1,12 @@
+// Copyright 2022 Outreach Corporation. All Rights Reserved.
+
+// Description: This package contains the implementation of append-only index of telemetry events.
+
+// Package store contains the implementation of Store.
+// Store provides a simple append-only index of telemetry events. On append it marshals the data into JSON
+// and appends it to the log file. The events are managed based on a key. Key is provided by the caller.
+// It also tracks whether the event has been processed or not. This is useful for determining if the event
+// needs to be sent to telemetry or not.
 package store
 
 import (
@@ -16,13 +25,14 @@ import (
 	"github.com/pkg/errors"
 )
 
+// entry is index entry for wrapping the event, tracking event key, and whether the event was processed.
 type entry struct {
 	Key       string                 `json:"key"`
 	Data      map[string]interface{} `json:"data"`
 	Processed bool                   `json:"processed,omitempty"`
 }
 
-
+// bag is an map alias that provides a MarshalRecord method. It's used to hold default fields.
 type bag map[string]interface{}
 
 func (b bag) MarshalRecord(addField func(name string, value interface{})) {
@@ -31,6 +41,7 @@ func (b bag) MarshalRecord(addField func(name string, value interface{})) {
 	}
 }
 
+// Store provides a generic append-only index of data.
 type Store interface {
 	Init(context.Context) error
 
@@ -45,6 +56,7 @@ type Store interface {
 	MarkProcessed(context.Context, []IndexMarshaller) error
 }
 
+// store is the concrete implementation of Store.
 type store struct {
 	logDir     string
 	logPath    string
@@ -56,12 +68,14 @@ type store struct {
 	defaultFields bag
 }
 
+// Options hold the store configuration.
 type Options struct {
 	LogDir     string
 	LogFS      fs.FS
 	OpenAppend func(path string) (io.WriteCloser, error)
 }
 
+// New creates a new store instance.
 func New(opts *Options) Store {
 	if opts.LogDir == "" {
 		opts.LogDir = filepath.Join(os.TempDir(), "devtel")
@@ -85,6 +99,8 @@ func New(opts *Options) Store {
 	}
 }
 
+// Init goes through all the log files in the log dir and loads the entries into the store.
+// It either creates a log file, or uses the last one if it exists.
 func (s *store) Init(ctx context.Context) error {
 	ctx = trace.StartCall(ctx, "store.Init")
 	defer trace.EndCall(ctx)
@@ -129,10 +145,12 @@ func (s *store) Init(ctx context.Context) error {
 	return trace.SetCallStatus(ctx, err)
 }
 
+// AddDefaultField adds a default field to the store. These fields are added to all events.
 func (s *store) AddDefaultField(k string, v interface{}) {
 	s.defaultFields[k] = v
 }
 
+// Append adds an event to the store.
 func (s *store) Append(ctx context.Context, value IndexMarshaller) error {
 	ctx = trace.StartCall(ctx, "store.Append")
 	defer trace.EndCall(ctx)
@@ -140,6 +158,8 @@ func (s *store) Append(ctx context.Context, value IndexMarshaller) error {
 	return trace.SetCallStatus(ctx, s.append(value, false))
 }
 
+// append adds an event to the store.
+// It adds default fields, and marshals the data. Then it appends the to the log file and in-memory index.
 func (s *store) append(value IndexMarshaller, processed bool) error {
 	val := make(map[string]interface{})
 
@@ -168,6 +188,7 @@ func (s *store) append(value IndexMarshaller, processed bool) error {
 	return nil
 }
 
+// appendEntry adds an entry to the in-memory index.
 func (s *store) appendEntry(e entry) {
 	if s.index == nil {
 		s.index = make(map[string]int)
@@ -176,6 +197,7 @@ func (s *store) appendEntry(e entry) {
 	s.entries = append(s.entries, e)
 }
 
+// Get gets an event from the store.
 func (s *store) Get(ctx context.Context, key string, value IndexMarshaller) error {
 	ctx = trace.StartCall(ctx, "store.Get")
 	defer trace.EndCall(ctx)
@@ -187,6 +209,7 @@ func (s *store) Get(ctx context.Context, key string, value IndexMarshaller) erro
 	return nil
 }
 
+// GetAll returns all the events in the store. The latest versions of the events.
 func (s *store) GetAll(ctx context.Context) *Cursor {
 	ctx = trace.StartCall(ctx, "store.GetAll")
 	defer trace.EndCall(ctx)
@@ -205,6 +228,7 @@ func (s *store) GetAll(ctx context.Context) *Cursor {
 	return NewCursor(values)
 }
 
+// GetUnprocessed returns all the events in the store that have not been processed.
 func (s *store) GetUnprocessed(ctx context.Context) *Cursor {
 	ctx = trace.StartCall(ctx, "store.GetUnprocessed")
 	defer trace.EndCall(ctx)
@@ -226,6 +250,7 @@ func (s *store) GetUnprocessed(ctx context.Context) *Cursor {
 	return NewCursor(values)
 }
 
+// MarkProcessed marks the events as processed.
 func (s *store) MarkProcessed(ctx context.Context, recs []IndexMarshaller) error {
 	ctx = trace.StartCall(ctx, "store.MarkProcessed")
 	defer trace.EndCall(ctx)
@@ -239,6 +264,7 @@ func (s *store) MarkProcessed(ctx context.Context, recs []IndexMarshaller) error
 	return nil
 }
 
+// restore reads the log file and adds the entries to the in-memory index.
 func (s *store) restore(r io.Reader) error {
 	scanner := bufio.NewScanner(r)
 	for scanner.Scan() {
