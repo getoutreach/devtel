@@ -1,6 +1,7 @@
 package store_test
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"testing"
@@ -69,17 +70,17 @@ func appendToFile(t *testing.T) {
 	s := store.New(&store.Options{
 		LogDir: tmpDir,
 	})
-	assert.NoError(t, s.Init())
-	assert.NoError(t, s.Append(&testEvent{ID: eventID}))
+	assert.NoError(t, s.Init(context.Background()))
+	assert.NoError(t, s.Append(context.Background(), &testEvent{ID: eventID}))
 }
 
 func restoreFormFile(t *testing.T) {
 	s := store.New(&store.Options{
 		LogDir: tmpDir,
 	})
-	assert.NoError(t, s.Init())
+	assert.NoError(t, s.Init(context.Background()))
 	var e testEvent
-	s.Get(eventID, &e)
+	s.Get(context.Background(), eventID, &e)
 	assert.NotEmpty(t, e)
 }
 
@@ -87,10 +88,10 @@ func processEvents(t *testing.T) {
 	s := store.New(&store.Options{
 		LogDir: tmpDir,
 	})
-	assert.NoError(t, s.Init())
+	assert.NoError(t, s.Init(context.Background()))
 	var id1 testEvent
-	s.Get(eventID, &id1)
+	s.Get(context.Background(), eventID, &id1)
 	assert.NotNil(t, id1)
 
-	s.MarkProcessed([]store.IndexMarshaller{&id1})
+	s.MarkProcessed(context.Background(), []store.IndexMarshaller{&id1})
 }

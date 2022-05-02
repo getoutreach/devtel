@@ -2,6 +2,7 @@ package store
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -11,6 +12,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/getoutreach/gobox/pkg/trace"
 	"github.com/pkg/errors"
 )
 
@@ -20,16 +22,26 @@ type entry struct {
 	Processed bool                   `json:"processed,omitempty"`
 }
 
+type bag map[string]interface{}
+
+func (b bag) MarshalRecord(addField func(name string, value interface{})) {
+	for k, v := range b {
+		addField(k, v)
+	}
+}
+
 type Store interface {
-	Init() error
+	Init(context.Context) error
 
-	Append(value IndexMarshaller) error
+	AddDefaultField(string, interface{})
 
-	Get(key string, value IndexMarshaller) error
-	GetAll() *Cursor
-	GetUnprocessed() *Cursor
+	Append(context.Context, IndexMarshaller) error
 
-	MarkProcessed([]IndexMarshaller) error
+	Get(context.Context, string, IndexMarshaller) error
+	GetAll(context.Context) *Cursor
+	GetUnprocessed(context.Context) *Cursor
+
+	MarkProcessed(context.Context, []IndexMarshaller) error
 }
 
 type store struct {
@@ -38,8 +50,9 @@ type store struct {
 	logFS      fs.FS
 	openAppend func(path string) (io.WriteCloser, error)
 
-	entries []entry
-	index   map[string]int
+	entries       []entry
+	index         map[string]int
+	defaultFields bag
 }
 
 type Options struct {
@@ -53,9 +66,6 @@ func New(opts *Options) Store {
 		opts.LogDir = filepath.Join(os.TempDir(), "devtel")
 	}
 
-	//nolint
-	os.MkdirAll(opts.LogDir, 0o755)
-
 	if opts.LogFS == nil {
 		opts.LogFS = os.DirFS(opts.LogDir)
 	}
@@ -67,13 +77,23 @@ func New(opts *Options) Store {
 	}
 
 	return &store{
-		logDir:     opts.LogDir,
-		logFS:      opts.LogFS,
-		openAppend: opts.OpenAppend,
+		logDir:        opts.LogDir,
+		logFS:         opts.LogFS,
+		openAppend:    opts.OpenAppend,
+		defaultFields: bag{},
 	}
 }
 
-func (s *store) Init() error {
+func (s *store) Init(ctx context.Context) error {
+	ctx = trace.StartCall(ctx, "store.Init")
+	defer trace.EndCall(ctx)
+
+	if s.logDir != "" {
+		if err := os.MkdirAll(s.logDir, 0o755); err != nil {
+			return trace.SetCallStatus(ctx, err)
+		}
+	}
+
 	err := fs.WalkDir(s.logFS, ".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -98,24 +118,33 @@ func (s *store) Init() error {
 	})
 
 	if err != nil {
-		return err
+		return trace.SetCallStatus(ctx, err)
 	}
 
 	if s.logPath == "" {
 		s.logPath = filepath.Join(s.logDir, fmt.Sprintf("%d.log", time.Now().Unix()))
 	}
 
-	return nil
+	return trace.SetCallStatus(ctx, err)
 }
 
-func (s *store) Append(value IndexMarshaller) error {
-	return s.append(value, false)
+func (s *store) AddDefaultField(k string, v interface{}) {
+	s.defaultFields[k] = v
+}
+
+func (s *store) Append(ctx context.Context, value IndexMarshaller) error {
+	ctx = trace.StartCall(ctx, "store.Append")
+	defer trace.EndCall(ctx)
+
+	return trace.SetCallStatus(ctx, s.append(value, false))
 }
 
 func (s *store) append(value IndexMarshaller, processed bool) error {
 	val := make(map[string]interface{})
 
-	value.MarshalRecord(addField(val))
+	adder := addField(val)
+	s.defaultFields.MarshalRecord(adder)
+	value.MarshalRecord(adder)
 
 	e := entry{value.Key(), val, processed}
 	b, err := json.Marshal(e)
@@ -146,15 +175,21 @@ func (s *store) appendEntry(e entry) {
 	s.entries = append(s.entries, e)
 }
 
-func (s *store) Get(key string, value IndexMarshaller) error {
+func (s *store) Get(ctx context.Context, key string, value IndexMarshaller) error {
+	ctx = trace.StartCall(ctx, "store.Get")
+	defer trace.EndCall(ctx)
+
 	if i, ok := s.index[key]; ok {
-		return value.UnmarshalRecord(s.entries[i].Data)
+		return trace.SetCallStatus(ctx, value.UnmarshalRecord(s.entries[i].Data))
 	}
 
 	return nil
 }
 
-func (s *store) GetAll() *Cursor {
+func (s *store) GetAll(ctx context.Context) *Cursor {
+	ctx = trace.StartCall(ctx, "store.GetAll")
+	defer trace.EndCall(ctx)
+
 	indexes := make([]int, 0, len(s.entries))
 	for _, index := range s.index {
 		indexes = append(indexes, index)
@@ -169,7 +204,10 @@ func (s *store) GetAll() *Cursor {
 	return NewCursor(values)
 }
 
-func (s *store) GetUnprocessed() *Cursor {
+func (s *store) GetUnprocessed(ctx context.Context) *Cursor {
+	ctx = trace.StartCall(ctx, "store.GetUnprocessed")
+	defer trace.EndCall(ctx)
+
 	indexes := make([]int, 0, len(s.entries))
 	for _, index := range s.index {
 		indexes = append(indexes, index)
@@ -187,10 +225,13 @@ func (s *store) GetUnprocessed() *Cursor {
 	return NewCursor(values)
 }
 
-func (s *store) MarkProcessed(recs []IndexMarshaller) error {
+func (s *store) MarkProcessed(ctx context.Context, recs []IndexMarshaller) error {
+	ctx = trace.StartCall(ctx, "store.MarkProcessed")
+	defer trace.EndCall(ctx)
+
 	for _, rec := range recs {
 		if err := s.append(rec, true); err != nil {
-			return err
+			return trace.SetCallStatus(ctx, err)
 		}
 	}
 

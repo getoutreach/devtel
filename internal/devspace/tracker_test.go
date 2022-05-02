@@ -88,7 +88,7 @@ func TestEventWrittenToBuffer(t *testing.T) {
 	r.Track(context.Background(), &before)
 
 	var b Event
-	assert.NoError(t, s.Get("9714f00a-b998-49e7-97a9-a8e2051905f7_before:deploy", &b))
+	assert.NoError(t, s.Get(context.Background(), "9714f00a-b998-49e7-97a9-a8e2051905f7_before:deploy", &b))
 	assert.Equal(t, before, b)
 }
 
@@ -108,7 +108,7 @@ func TestEventMatched(t *testing.T) {
 	r.Track(context.Background(), &before)
 	r.Track(context.Background(), &after)
 
-	assert.NoError(t, s.Get("9714f00a-b998-49e7-97a9-a8e2051905f7_after:deploy", &after))
+	assert.NoError(t, s.Get(context.Background(), "9714f00a-b998-49e7-97a9-a8e2051905f7_after:deploy", &after))
 	assert.Equal(t, int64(9046), after.Duration)
 }
 
@@ -132,7 +132,7 @@ func TestCanUseRestoredEvents(t *testing.T) {
 	assert.NoError(t, json.Unmarshal([]byte(afterEvent), &after))
 	r.Track(context.Background(), &after)
 
-	assert.NoError(t, s.Get("9714f00a-b998-49e7-97a9-a8e2051905f7_after:deploy", &after))
+	assert.NoError(t, s.Get(context.Background(), "9714f00a-b998-49e7-97a9-a8e2051905f7_after:deploy", &after))
 	assert.Equal(t, int64(9046), after.Duration)
 }
 
