@@ -47,9 +47,9 @@ func (b eventBag) UnmarshalRecord(data map[string]interface{}) error {
 	return nil
 }
 
-// tracker is responsible for matching events, calculating durations and storing the data in a store.
+// EventTracker is responsible for matching events, calculating durations and storing the data in a store.
 // It also handles the processing of the events on Flush.
-type tracker struct {
+type EventTracker struct {
 	s store.Store
 	p Processor
 }
@@ -69,8 +69,8 @@ type Options struct {
 	Store store.Store
 }
 
-// NewTracker creates a new tracker.
-func NewTracker(p Processor, opts ...func(*Options)) Tracker {
+// NewTracker creates a new DevspaceTracker.
+func NewTracker(p Processor, opts ...func(*Options)) *EventTracker {
 	o := &Options{}
 	for _, opt := range opts {
 		opt(o)
@@ -80,7 +80,7 @@ func NewTracker(p Processor, opts ...func(*Options)) Tracker {
 		o.Store = store.New(&store.Options{})
 	}
 
-	return &tracker{
+	return &EventTracker{
 		s: o.Store,
 		p: p,
 	}
@@ -94,7 +94,7 @@ func WithStore(s store.Store) func(opts *Options) {
 }
 
 // Init intializes the store.
-func (t *tracker) Init(ctx context.Context) error {
+func (t *EventTracker) Init(ctx context.Context) error {
 	ctx = trace.StartCall(ctx, "tracker.Init")
 	defer trace.EndCall(ctx)
 
@@ -102,12 +102,12 @@ func (t *tracker) Init(ctx context.Context) error {
 }
 
 // AddDefaultField adds a default field to be added the event.
-func (t *tracker) AddDefaultField(k string, v interface{}) {
+func (t *EventTracker) AddDefaultField(k string, v interface{}) {
 	t.s.AddDefaultField(k, v)
 }
 
 // Track stores and matches an event.
-func (t *tracker) Track(ctx context.Context, event *Event) {
+func (t *EventTracker) Track(ctx context.Context, event *Event) {
 	ctx = trace.StartCall(ctx, "tracker.Track")
 	defer trace.EndCall(ctx)
 
@@ -122,7 +122,7 @@ func (t *tracker) Track(ctx context.Context, event *Event) {
 }
 
 // Flush processes the events in the store.
-func (t *tracker) Flush(ctx context.Context) error {
+func (t *EventTracker) Flush(ctx context.Context) error {
 	ctx = trace.StartCall(ctx, "tracker.Flush")
 	defer trace.EndCall(ctx)
 
@@ -150,7 +150,7 @@ func (t *tracker) Flush(ctx context.Context) error {
 }
 
 // tryGetBeforeHook tries to get the before hook event for given event.
-func (t *tracker) tryGetBeforeHook(ctx context.Context, event *Event) *Event {
+func (t *EventTracker) tryGetBeforeHook(ctx context.Context, event *Event) *Event {
 	beforeHook := getBeforeHook(event.Hook)
 	if beforeHook == "" {
 		return nil
@@ -169,7 +169,7 @@ func (t *tracker) tryGetBeforeHook(ctx context.Context, event *Event) *Event {
 }
 
 // combineEvents calculates the duration and sets it on the after event.
-func (*tracker) combineEvents(before, after *Event) *Event {
+func (*EventTracker) combineEvents(before, after *Event) *Event {
 	after.Duration = after.Timestamp - before.Timestamp
 
 	return after

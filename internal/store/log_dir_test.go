@@ -54,7 +54,7 @@ func TestInit(t *testing.T) {
 		OpenAppend: func(path string) (io.WriteCloser, error) {
 			return &w, nil
 		},
-	}).(*store)
+	})
 	s.logDir = ""
 
 	assert.NoError(t, s.Init(context.Background()))

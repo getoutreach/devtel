@@ -56,8 +56,8 @@ type Store interface {
 	MarkProcessed(context.Context, []IndexMarshaller) error
 }
 
-// store is the concrete implementation of Store.
-type store struct {
+// FSStore is the concrete implementation of Store.
+type FSStore struct {
 	logDir     string
 	logPath    string
 	logFS      fs.FS
@@ -75,8 +75,8 @@ type Options struct {
 	OpenAppend func(path string) (io.WriteCloser, error)
 }
 
-// New creates a new store instance.
-func New(opts *Options) Store {
+// New creates a new FSStore instance.
+func New(opts *Options) *FSStore {
 	if opts.LogDir == "" {
 		opts.LogDir = filepath.Join(os.TempDir(), "devtel")
 	}
@@ -91,7 +91,7 @@ func New(opts *Options) Store {
 		}
 	}
 
-	return &store{
+	return &FSStore{
 		logDir:        opts.LogDir,
 		logFS:         opts.LogFS,
 		openAppend:    opts.OpenAppend,
@@ -101,7 +101,7 @@ func New(opts *Options) Store {
 
 // Init goes through all the log files in the log dir and loads the entries into the store.
 // It either creates a log file, or uses the last one if it exists.
-func (s *store) Init(ctx context.Context) error {
+func (s *FSStore) Init(ctx context.Context) error {
 	ctx = trace.StartCall(ctx, "store.Init")
 	defer trace.EndCall(ctx)
 
@@ -146,12 +146,12 @@ func (s *store) Init(ctx context.Context) error {
 }
 
 // AddDefaultField adds a default field to the store. These fields are added to all events.
-func (s *store) AddDefaultField(k string, v interface{}) {
+func (s *FSStore) AddDefaultField(k string, v interface{}) {
 	s.defaultFields[k] = v
 }
 
 // Append adds an event to the store.
-func (s *store) Append(ctx context.Context, value IndexMarshaller) error {
+func (s *FSStore) Append(ctx context.Context, value IndexMarshaller) error {
 	ctx = trace.StartCall(ctx, "store.Append")
 	defer trace.EndCall(ctx)
 
@@ -160,7 +160,7 @@ func (s *store) Append(ctx context.Context, value IndexMarshaller) error {
 
 // append adds an event to the store.
 // It adds default fields, and marshals the data. Then it appends the to the log file and in-memory index.
-func (s *store) append(value IndexMarshaller, processed bool) error {
+func (s *FSStore) append(value IndexMarshaller, processed bool) error {
 	val := make(map[string]interface{})
 
 	adder := addField(val)
@@ -189,7 +189,7 @@ func (s *store) append(value IndexMarshaller, processed bool) error {
 }
 
 // appendEntry adds an entry to the in-memory index.
-func (s *store) appendEntry(e entry) {
+func (s *FSStore) appendEntry(e entry) {
 	if s.index == nil {
 		s.index = make(map[string]int)
 	}
@@ -198,7 +198,7 @@ func (s *store) appendEntry(e entry) {
 }
 
 // Get gets an event from the store.
-func (s *store) Get(ctx context.Context, key string, value IndexMarshaller) error {
+func (s *FSStore) Get(ctx context.Context, key string, value IndexMarshaller) error {
 	ctx = trace.StartCall(ctx, "store.Get")
 	defer trace.EndCall(ctx)
 
@@ -210,7 +210,7 @@ func (s *store) Get(ctx context.Context, key string, value IndexMarshaller) erro
 }
 
 // GetAll returns all the events in the store. The latest versions of the events.
-func (s *store) GetAll(ctx context.Context) *Cursor {
+func (s *FSStore) GetAll(ctx context.Context) *Cursor {
 	ctx = trace.StartCall(ctx, "store.GetAll")
 	defer trace.EndCall(ctx)
 
@@ -229,7 +229,7 @@ func (s *store) GetAll(ctx context.Context) *Cursor {
 }
 
 // GetUnprocessed returns all the events in the store that have not been processed.
-func (s *store) GetUnprocessed(ctx context.Context) *Cursor {
+func (s *FSStore) GetUnprocessed(ctx context.Context) *Cursor {
 	ctx = trace.StartCall(ctx, "store.GetUnprocessed")
 	defer trace.EndCall(ctx)
 
@@ -251,7 +251,7 @@ func (s *store) GetUnprocessed(ctx context.Context) *Cursor {
 }
 
 // MarkProcessed marks the events as processed.
-func (s *store) MarkProcessed(ctx context.Context, recs []IndexMarshaller) error {
+func (s *FSStore) MarkProcessed(ctx context.Context, recs []IndexMarshaller) error {
 	ctx = trace.StartCall(ctx, "store.MarkProcessed")
 	defer trace.EndCall(ctx)
 
@@ -265,7 +265,7 @@ func (s *store) MarkProcessed(ctx context.Context, recs []IndexMarshaller) error
 }
 
 // restore reads the log file and adds the entries to the in-memory index.
-func (s *store) restore(r io.Reader) error {
+func (s *FSStore) restore(r io.Reader) error {
 	scanner := bufio.NewScanner(r)
 	for scanner.Scan() {
 		var e entry
