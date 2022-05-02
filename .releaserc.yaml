@@ -1,7 +1,5 @@
 preset: conventionalcommits
 branches:
-  - name: plisy/feat/async-trace
-    prerelase: "dev"
   - name: main
     prerelease: "rc"
   - name: release
