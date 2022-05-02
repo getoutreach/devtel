@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"regexp"
 	"testing"
 
 	"github.com/getoutreach/gobox/pkg/log"
@@ -26,16 +25,21 @@ func TestTrackEvent(t *testing.T) {
 		b, err := io.ReadAll(r.Body)
 		assert.NoError(t, err)
 
-		//nolint // Why: Comparing actual value, the string is long.
-		pattern, err := regexp.Compile(`^\[{"event":"devspace_hook","hook":"before:build","execution_id":"031cb474-c2f4-433f-863e-684c35c8d5ac","status":"info","command":{"name":"deploy","line":"devspace deploy \[flags\]","flags":\["--namespace","yoda--bento1a","--no-warn"\]},"timestamp":\d+,"@timestamp":"[^"]+"}\]$`)
 		assert.NoError(t, err)
-		assert.Regexp(t, pattern, string(b))
+
+		assert.Contains(t, string(b), `"hook":"before:build"`)
+		assert.Contains(t, string(b), `"execution_id":"031cb474-c2f4-433f-863e-684c35c8d5ac"`)
+		assert.Contains(t, string(b), `"status":"info"`)
+		assert.Contains(t, string(b), `line":"devspace deploy [flags]"`)
+		assert.Contains(t, string(b), `name":"deploy"`)
+		assert.Contains(t, string(b), `"email":"yoda@outreach.io"`)
 
 		w.WriteHeader(http.StatusCreated)
 	}))
 	defer server.Close()
 
 	os.Setenv("OUTREACH_TELEFORK_ENDPOINT", server.URL)
+	os.Setenv("DEV_EMAIL", "yoda@outreach.io")
 
 	os.Setenv("DEVSPACE_PLUGIN_EVENT", "before:build")
 	os.Setenv("DEVSPACE_PLUGIN_EXECUTION_ID", "031cb474-c2f4-433f-863e-684c35c8d5ac")

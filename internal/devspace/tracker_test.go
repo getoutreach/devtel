@@ -155,7 +155,33 @@ func TestCanProcessEvents(t *testing.T) {
 
 	assert.NoError(t, r.Flush(context.Background()))
 	assert.Len(t, p.lastBatch, 2)
+	assert.Equal(t, 0, s.GetUnprocessed(context.Background()).Len())
 
 	assert.NoError(t, r.Flush(context.Background()))
+	assert.Equal(t, 2, s.GetAll(context.Background()).Len())
 	assert.Len(t, p.lastBatch, 0)
+}
+
+func TestProcessesWithDefaultFields(t *testing.T) {
+	var buff store.TestClosableBuffer
+	p := &testProcessor{}
+	s := store.New(&store.Options{
+		OpenAppend: func(key string) (io.WriteCloser, error) {
+			return &buff, nil
+		},
+	})
+	r := NewTracker(p, WithStore(s))
+	assert.NoError(t, r.Init(context.Background()))
+
+	r.AddDefaultField("defaultField", "present")
+
+	var before Event
+	assert.NoError(t, json.Unmarshal([]byte(beforeEvent), &before))
+
+	r.Track(context.Background(), &before)
+
+	assert.NoError(t, r.Flush(context.Background()))
+	assert.Len(t, p.lastBatch, 1)
+
+	assert.Contains(t, p.lastBatch[0], `"defaultField":"present"`)
 }
