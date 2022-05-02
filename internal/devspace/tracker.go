@@ -2,7 +2,6 @@ package devspace
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/getoutreach/devtel/internal/store"
 )
@@ -30,9 +29,7 @@ func NewTracker(p Processor, opts ...func(*Options)) Tracker {
 	}
 
 	if o.Store == nil {
-		o.Store = store.New(eventKey, &store.Options{
-			RestoreConverter: eventFromMap,
-		})
+		o.Store = store.New(&store.Options{})
 	}
 
 	return &tracker{
@@ -53,7 +50,6 @@ func (t *tracker) Init() error {
 
 func (t *tracker) Track(event *Event) {
 	if before := t.tryGetBeforeHook(event); before != nil {
-		log.Printf("Found before event: %s\n", before.Hook)
 		event = t.combineEvents(before, event)
 	}
 
@@ -63,10 +59,22 @@ func (t *tracker) Track(event *Event) {
 }
 
 func (t *tracker) Flush() error {
-	log.Println("Flush")
-	events := t.s.GetUnprocessed()
+	cursor := t.s.GetUnprocessed()
+	// Generics are bad. bad. We don't want generics.
+	var events []store.IndexMarshaller
+	var toProcess []interface{}
 
-	err := t.p.ProcessRecords(events)
+	for cursor.Next() {
+		var event Event
+		if err := cursor.Value(&event); err != nil {
+			// TODO: probably should logs something here
+			continue
+		}
+		events = append(events, &event)
+		toProcess = append(toProcess, &event)
+	}
+
+	err := t.p.ProcessRecords(toProcess)
 	if err != nil {
 		return err
 	}
@@ -85,11 +93,11 @@ func (t *tracker) tryGetBeforeHook(event *Event) *Event {
 		beforeKey = fmt.Sprintf("%s_%s", event.ExecutionID, beforeHook)
 	}
 
-	val := t.s.Get(beforeKey)
-	if val == nil {
+	var val Event
+	if err := t.s.Get(beforeKey, &val); err != nil {
 		return nil
 	}
-	return val.(*Event)
+	return &val
 }
 
 func (*tracker) combineEvents(before, after *Event) *Event {

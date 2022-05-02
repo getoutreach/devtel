@@ -56,29 +56,26 @@ var afterEvent = `{
 // Unmarshal and marshal back, but without indentation.
 //nolint:gochecknoinits // Why: helps understand the test data
 func init() {
-	var m Event
-	if err := json.Unmarshal([]byte(beforeEvent), &m); err != nil {
-		panic(err)
-	}
-	if b, err := json.Marshal(m); err != nil {
-		panic(err)
-	} else {
-		beforeEvent = string(b)
+	normalize := func(orig string) string {
+		var event Event
+		if err := json.Unmarshal([]byte(orig), &event); err != nil {
+			panic(err)
+		}
+
+		if b, err := json.Marshal(event); err != nil {
+			panic(err)
+		} else {
+			return string(b)
+		}
 	}
 
-	if err := json.Unmarshal([]byte(afterEvent), &m); err != nil {
-		panic(err)
-	}
-	if b, err := json.Marshal(m); err != nil {
-		panic(err)
-	} else {
-		afterEvent = string(b)
-	}
+	beforeEvent = normalize(beforeEvent)
+	afterEvent = normalize(afterEvent)
 }
 
 func TestEventWrittenToBuffer(t *testing.T) {
 	var buff store.TestClosableBuffer
-	s := store.New(eventKey, &store.Options{
+	s := store.New(&store.Options{
 		OpenAppend: func(key string) (io.WriteCloser, error) {
 			return &buff, nil
 		},
@@ -89,14 +86,14 @@ func TestEventWrittenToBuffer(t *testing.T) {
 	assert.NoError(t, json.Unmarshal([]byte(beforeEvent), &before))
 	r.Track(&before)
 
-	expected := `{"key":"9714f00a-b998-49e7-97a9-a8e2051905f7_before:deploy","data":` + beforeEvent + `}` + "\n"
-
-	assert.Equal(t, expected, buff.String())
+	var b Event
+	assert.NoError(t, s.Get("9714f00a-b998-49e7-97a9-a8e2051905f7_before:deploy", &b))
+	assert.Equal(t, before, b)
 }
 
 func TestEventMatched(t *testing.T) {
 	var buff store.TestClosableBuffer
-	s := store.New(eventKey, &store.Options{
+	s := store.New(&store.Options{
 		OpenAppend: func(key string) (io.WriteCloser, error) {
 			return &buff, nil
 		},
@@ -110,47 +107,38 @@ func TestEventMatched(t *testing.T) {
 	r.Track(&before)
 	r.Track(&after)
 
-	expected := "" + // This makes it nicely arranged
-		`{"key":"9714f00a-b998-49e7-97a9-a8e2051905f7_before:deploy","data":` + beforeEvent + `}` + "\n" +
-		`{"key":"9714f00a-b998-49e7-97a9-a8e2051905f7_after:deploy","data":` + afterEvent[:len(afterEvent)-1] + `,"duration_ms":9046}}` + "\n"
-
-	assert.Equal(t, expected, buff.String())
+	assert.NoError(t, s.Get("9714f00a-b998-49e7-97a9-a8e2051905f7_after:deploy", &after))
+	assert.Equal(t, int64(9046), after.Duration)
 }
 
-func TestCanRestoreOnInit(t *testing.T) {
+func TestCanUseRestoredEvents(t *testing.T) {
 	logFS := make(fstest.MapFS)
 	logFS["1.log"] = &fstest.MapFile{
 		Data: []byte(`{"key":"9714f00a-b998-49e7-97a9-a8e2051905f7_before:deploy","data":` + beforeEvent + `}` + "\n"),
 	}
 	var buff store.TestClosableBuffer
 	p := &testProcessor{}
-	s := store.New(eventKey, &store.Options{
+	s := store.New(&store.Options{
 		LogFS: logFS,
-
-		RestoreConverter: eventFromMap,
 		OpenAppend: func(key string) (io.WriteCloser, error) {
 			return &buff, nil
 		},
 	})
 	r := NewTracker(p, WithStore(s))
+	assert.NoError(t, r.Init())
 
-	if err := r.Init(); err != nil {
-		t.Error(err)
-	}
 	var after Event
 	assert.NoError(t, json.Unmarshal([]byte(afterEvent), &after))
 	r.Track(&after)
 
-	expected := `{"key":"9714f00a-b998-49e7-97a9-a8e2051905f7_after:deploy","data":` +
-		afterEvent[:len(afterEvent)-1] + `,"duration_ms":9046}}` + "\n"
-	assert.Equal(t, expected, buff.String())
+	assert.NoError(t, s.Get("9714f00a-b998-49e7-97a9-a8e2051905f7_after:deploy", &after))
+	assert.Equal(t, int64(9046), after.Duration)
 }
 
 func TestCanProcessEvents(t *testing.T) {
 	var buff store.TestClosableBuffer
 	p := &testProcessor{}
-	s := store.New(eventKey, &store.Options{
-		RestoreConverter: eventFromMap,
+	s := store.New(&store.Options{
 		OpenAppend: func(key string) (io.WriteCloser, error) {
 			return &buff, nil
 		},

@@ -1,33 +1,35 @@
 package store
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"io"
 	"io/fs"
-	"log"
 	"os"
 	"path/filepath"
 	"sort"
 	"time"
+
+	"github.com/pkg/errors"
 )
 
 type entry struct {
-	Key       string      `json:"key"`
-	Data      interface{} `json:"data"`
-	Processed bool        `json:"processed,omitempty"`
+	Key       string                 `json:"key"`
+	Data      map[string]interface{} `json:"data"`
+	Processed bool                   `json:"processed,omitempty"`
 }
 
 type Store interface {
 	Init() error
 
-	Append(value interface{}) error
+	Append(value IndexMarshaller) error
 
-	Get(key string) interface{}
-	GetAll() []interface{}
-	GetUnprocessed() []interface{}
+	Get(key string, value IndexMarshaller) error
+	GetAll() *Cursor
+	GetUnprocessed() *Cursor
 
-	MarkProcessed([]interface{}) error
+	MarkProcessed([]IndexMarshaller) error
 }
 
 type store struct {
@@ -38,20 +40,15 @@ type store struct {
 
 	entries []entry
 	index   map[string]int
-
-	extractKey       func(interface{}) string
-	restoreConverter func(map[string]interface{}) interface{}
 }
 
 type Options struct {
 	LogDir     string
 	LogFS      fs.FS
 	OpenAppend func(path string) (io.WriteCloser, error)
-
-	RestoreConverter func(map[string]interface{}) interface{}
 }
 
-func New(extractKey func(interface{}) string, opts *Options) Store {
+func New(opts *Options) Store {
 	if opts.LogDir == "" {
 		opts.LogDir = filepath.Join(os.TempDir(), "devtel")
 	}
@@ -73,9 +70,6 @@ func New(extractKey func(interface{}) string, opts *Options) Store {
 		logDir:     opts.LogDir,
 		logFS:      opts.LogFS,
 		openAppend: opts.OpenAppend,
-
-		extractKey:       extractKey,
-		restoreConverter: opts.RestoreConverter,
 	}
 }
 
@@ -88,20 +82,16 @@ func (s *store) Init() error {
 			return nil
 		}
 
-		log.Printf("Found log file: %s\n", filepath.Join(s.logDir, path))
-
 		f, err := s.logFS.Open(path)
 		if err != nil {
-			return err
+			return errors.Wrapf(err, "failed to open %s", path)
 		}
 		defer f.Close()
 
-		log.Printf("Restoring log file: %s\n", filepath.Join(s.logDir, path))
 		if err := s.restore(f); err != nil {
-			return err
+			return errors.Wrapf(err, "failed to restore %s", path)
 		}
 
-		log.Printf("Setting log file: %s\n", filepath.Join(s.logDir, path))
 		s.logPath = filepath.Join(s.logDir, path)
 
 		return nil
@@ -113,20 +103,21 @@ func (s *store) Init() error {
 
 	if s.logPath == "" {
 		s.logPath = filepath.Join(s.logDir, fmt.Sprintf("%d.log", time.Now().Unix()))
-		log.Printf("Setting log file: %s\n", filepath.Join(s.logDir, s.logPath))
 	}
 
 	return nil
 }
 
-func (s *store) Append(value interface{}) error {
-	log.Printf("Append: %s\n", s.extractKey(value))
-
+func (s *store) Append(value IndexMarshaller) error {
 	return s.append(value, false)
 }
 
-func (s *store) append(value interface{}, processed bool) error {
-	e := entry{s.extractKey(value), value, processed}
+func (s *store) append(value IndexMarshaller, processed bool) error {
+	val := make(map[string]interface{})
+
+	value.MarshalRecord(addField(val))
+
+	e := entry{value.Key(), val, processed}
 	b, err := json.Marshal(e)
 	if err != nil {
 		return err
@@ -155,42 +146,37 @@ func (s *store) appendEntry(e entry) {
 	s.entries = append(s.entries, e)
 }
 
-func (s *store) Get(key string) interface{} {
-	log.Printf("Get: %s\n", key)
-
+func (s *store) Get(key string, value IndexMarshaller) error {
 	if i, ok := s.index[key]; ok {
-		return s.entries[i].Data
+		return value.UnmarshalRecord(s.entries[i].Data)
 	}
+
 	return nil
 }
 
-func (s *store) GetAll() []interface{} {
-	log.Printf("GetAll\n")
-
+func (s *store) GetAll() *Cursor {
 	indexes := make([]int, 0, len(s.entries))
 	for _, index := range s.index {
 		indexes = append(indexes, index)
 	}
 	sort.Ints(indexes)
 
-	var values []interface{}
+	var values []map[string]interface{}
 	for _, index := range indexes {
 		values = append(values, s.entries[index].Data)
 	}
 
-	return values
+	return NewCursor(values)
 }
 
-func (s *store) GetUnprocessed() []interface{} {
-	log.Printf("GetUnprocessed\n")
-
+func (s *store) GetUnprocessed() *Cursor {
 	indexes := make([]int, 0, len(s.entries))
 	for _, index := range s.index {
 		indexes = append(indexes, index)
 	}
 	sort.Ints(indexes)
 
-	var values []interface{}
+	var values []map[string]interface{}
 	for _, index := range indexes {
 		val := s.entries[index]
 		if !val.Processed {
@@ -198,12 +184,10 @@ func (s *store) GetUnprocessed() []interface{} {
 		}
 	}
 
-	return values
+	return NewCursor(values)
 }
 
-func (s *store) MarkProcessed(recs []interface{}) error {
-	log.Printf("MarkProcessed\n")
-
+func (s *store) MarkProcessed(recs []IndexMarshaller) error {
 	for _, rec := range recs {
 		if err := s.append(rec, true); err != nil {
 			return err
@@ -214,28 +198,20 @@ func (s *store) MarkProcessed(recs []interface{}) error {
 }
 
 func (s *store) restore(r io.Reader) error {
-	log.Printf("Restore\n")
-
-	dec := json.NewDecoder(r)
-
-	for dec.More() {
+	scanner := bufio.NewScanner(r)
+	for scanner.Scan() {
 		var e entry
-		if err := dec.Decode(&e); err != nil {
-			return err
-		}
 
+		if err := json.Unmarshal(scanner.Bytes(), &e); err != nil {
+			fmt.Println("Scanner.Text:")
+			fmt.Println(scanner.Text())
+			return errors.Wrap(err, "failed to unmarshal entry")
+		}
 		if e.Key == "" {
 			continue
 		}
 		if e.Data == nil {
 			continue
-		}
-
-		// JSON transforms into map[string]interface{}
-		if s.restoreConverter != nil {
-			e.Data = s.restoreConverter(e.Data.(map[string]interface{}))
-		} else {
-			e.Data = e.Data.(map[string]interface{})
 		}
 
 		s.appendEntry(e)

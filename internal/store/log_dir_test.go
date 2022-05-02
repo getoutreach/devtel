@@ -36,10 +36,10 @@ func (w *testWriteCloser) Close() error {
 func TestInit(t *testing.T) {
 	logFS := make(fstest.MapFS)
 	logFS["test1.txt"] = &fstest.MapFile{
-		Data: []byte(`{"key":"before:deploy","data":{"hook":"before:deploy","timestamp":2147483605}}` + "\n"),
+		Data: []byte(`{"key":"before:deploy","data":{"id":"before:deploy","timestamp":2147483605}}` + "\n"),
 	}
 	logFS["test2.txt"] = &fstest.MapFile{
-		Data: []byte(`{"key":"after:deploy","data":{"hook":"before:deploy","timestamp":2147483647}}` + "\n"),
+		Data: []byte(`{"key":"after:deploy","data":{"id":"after:deploy","timestamp":2147483647}}` + "\n"),
 	}
 
 	w := testWriteCloser{
@@ -47,18 +47,25 @@ func TestInit(t *testing.T) {
 		fs:   logFS,
 	}
 
-	s := New(payloadID, &Options{
-		LogFS: logFS,
+	s := New(&Options{
+		LogDir: "./",
+		LogFS:  logFS,
 		OpenAppend: func(path string) (io.WriteCloser, error) {
 			return &w, nil
 		},
-	})
+	}).(*store)
+	s.logDir = ""
 
 	assert.NoError(t, s.Init())
 
-	assert.NotNil(t, s.Get("before:deploy"))
-	assert.NotNil(t, s.Get("after:deploy"))
-	assert.Nil(t, s.Get("after:build"))
+	var beforeDeploy, afterDeploy, afterBuild payload
+	assert.NoError(t, s.Get("before:deploy", &beforeDeploy))
+	assert.NoError(t, s.Get("after:deploy", &afterDeploy))
+	assert.NoError(t, s.Get("after:build", &afterBuild))
+
+	assert.NotEmpty(t, beforeDeploy)
+	assert.NotNil(t, afterDeploy)
+	assert.Empty(t, afterBuild)
 }
 
 func TestAppendOpener(t *testing.T) {
@@ -67,7 +74,7 @@ func TestAppendOpener(t *testing.T) {
 		path: "latest.txt",
 		fs:   logFS,
 	}
-	s := New(payloadID, &Options{
+	s := New(&Options{
 		LogFS: logFS,
 		OpenAppend: func(path string) (io.WriteCloser, error) {
 			return &w, nil
@@ -76,10 +83,15 @@ func TestAppendOpener(t *testing.T) {
 
 	assert.NoError(t, s.Init())
 
-	s.Append(payload{ID: "before:deploy", Content: "content1"})
-	s.Append(payload{ID: "after:deploy", Content: "content1"})
+	s.Append(&payload{ID: "before:deploy", Content: "content1"})
+	s.Append(&payload{ID: "after:deploy", Content: "content1"})
 
-	assert.NotNil(t, s.Get("before:deploy"))
-	assert.NotNil(t, s.Get("after:deploy"))
-	assert.Nil(t, s.Get("after:build"))
+	var beforeDeploy, afterDeploy, afterBuild payload
+	s.Get("before:deploy", &beforeDeploy)
+	s.Get("after:deploy", &afterDeploy)
+	s.Get("after:build", &afterBuild)
+
+	assert.NotEmpty(t, beforeDeploy)
+	assert.NotNil(t, afterDeploy)
+	assert.Empty(t, afterBuild)
 }
