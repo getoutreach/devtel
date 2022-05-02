@@ -1,20 +1,183 @@
 name: devtel
 version: 0.0.1
 
-# TODO: Add more hooks
 # TODO: Add common properties (like the ones we are sending for CLI)
 # TODO: Figure out versioning, deployment, and downloading releases.
 # TODO: Delete old log files
 
 hooks:
   - event: before:build
-    baseArgs: ["--skip-update", "track"]
+    baseArgs: ["--skip-update", "track", "before:build"]
   - event: after:build
-    baseArgs: ["--skip-update", "track"]
+    baseArgs: ["--skip-update", "track", "after:build"]
+  - event: error:build
+    baseArgs: ["--skip-update", "track", "error:build"]
   - event: before:deploy
-    baseArgs: ["--skip-update", "track"]
+    baseArgs: ["--skip-update", "track", "before:deploy"]
   - event: after:deploy
-    baseArgs: ["--skip-update", "track"]
+    baseArgs: ["--skip-update", "track", "after:deploy"]
+  - event: before:deploy
+    baseArgs: ["--skip-update", "track", "before:deploy"]
+  - event: after:deploy
+    baseArgs: ["--skip-update", "track", "after:deploy"]
+  - event: error:deploy
+    baseArgs: ["--skip-update", "track", "error:deploy"]
+  - event: skip:deploy
+    baseArgs: ["--skip-update", "track", "skip:deploy"]
+  - event: before:render
+    baseArgs: ["--skip-update", "track", "before:render"]
+  - event: after:render
+    baseArgs: ["--skip-update", "track", "after:render"]
+  - event: before:render
+    baseArgs: ["--skip-update", "track", "before:render"]
+  - event: after:render
+    baseArgs: ["--skip-update", "track", "after:render"]
+  - event: error:render
+    baseArgs: ["--skip-update", "track", "error:render"]
+  - event: before:purge
+    baseArgs: ["--skip-update", "track", "before:purge"]
+  - event: after:purge
+    baseArgs: ["--skip-update", "track", "after:purge"]
+  - event: before:purge
+    baseArgs: ["--skip-update", "track", "before:purge"]
+  - event: after:purge
+    baseArgs: ["--skip-update", "track", "after:purge"]
+  - event: error:purge
+    baseArgs: ["--skip-update", "track", "error:purge"]
+  - event: before:resolveDependency
+    baseArgs: ["--skip-update", "track", "before:resolveDependency"]
+  - event: after:resolveDependency
+    baseArgs: ["--skip-update", "track", "after:resolveDependency"]
+  - event: error:resolveDependency
+    baseArgs: ["--skip-update", "track", "error:resolveDependency"]
+  - event: before:buildDependency
+    baseArgs: ["--skip-update", "track", "before:buildDependency"]
+  - event: after:buildDependency
+    baseArgs: ["--skip-update", "track", "after:buildDependency"]
+  - event: error:buildDependency
+    baseArgs: ["--skip-update", "track", "error:buildDependency"]
+  - event: before:deployDependency
+    baseArgs: ["--skip-update", "track", "before:deployDependency"]
+  - event: after:deployDependency
+    baseArgs: ["--skip-update", "track", "after:deployDependency"]
+  - event: error:deployDependency
+    baseArgs: ["--skip-update", "track", "error:deployDependency"]
+  - event: before:renderDependency
+    baseArgs: ["--skip-update", "track", "before:renderDependency"]
+  - event: after:renderDependency
+    baseArgs: ["--skip-update", "track", "after:renderDependency"]
+  - event: error:renderDependency
+    baseArgs: ["--skip-update", "track", "error:renderDependency"]
+  - event: before:purgeDependency
+    baseArgs: ["--skip-update", "track", "before:purgeDependency"]
+  - event: after:purgeDependency
+    baseArgs: ["--skip-update", "track", "after:purgeDependency"]
+  - event: error:purgeDependency
+    baseArgs: ["--skip-update", "track", "error:purgeDependency"]
+  - event: before:configLoad
+    baseArgs: ["--skip-update", "track", "before:configLoad"]
+  - event: after:configLoad
+    baseArgs: ["--skip-update", "track", "after:configLoad"]
+  - event: error:configLoad
+    baseArgs: ["--skip-update", "track", "error:configLoad"]
+  - event: start:sync
+    baseArgs: ["--skip-update", "track", "start:sync"]
+  - event: stop:sync
+    baseArgs: ["--skip-update", "track", "stop:sync"]
+  - event: error:sync
+    baseArgs: ["--skip-update", "track", "error:sync"]
+  - event: restart:sync
+    baseArgs: ["--skip-update", "track", "restart:sync"]
+  - event: before:initialSync
+    baseArgs: ["--skip-update", "track", "before:initialSync"]
+  - event: after:initialSync
+    baseArgs: ["--skip-update", "track", "after:initialSync"]
+  - event: error:initialSync
+    baseArgs: ["--skip-update", "track", "error:initialSync"]
+  - event: start:portForwarding
+    baseArgs: ["--skip-update", "track", "start:portForwarding"]
+  - event: error:portForwarding
+    baseArgs: ["--skip-update", "track", "error:portForwarding"]
+  - event: stop:portForwarding
+    baseArgs: ["--skip-update", "track", "stop:portForwarding"]
+  - event: start:reversePortForwarding
+    baseArgs: ["--skip-update", "track", "start:reversePortForwarding"]
+  - event: error:reversePortForwarding
+    baseArgs: ["--skip-update", "track", "error:reversePortForwarding"]
+  - event: stop:reversePortForwarding
+    baseArgs: ["--skip-update", "track", "stop:reversePortForwarding"]
+  - event: before:createPullSecrets
+    baseArgs: ["--skip-update", "track", "before:createPullSecrets"]
+  - event: after:createPullSecrets
+    baseArgs: ["--skip-update", "track", "after:createPullSecrets"]
+  - event: error:createPullSecrets
+    baseArgs: ["--skip-update", "track", "error:createPullSecrets"]
+  - event: devCommand:before:sync
+    baseArgs: ["--skip-update", "track", "devCommand:before:sync"]
+  - event: devCommand:after:sync
+    baseArgs: ["--skip-update", "track", "devCommand:after:sync"]
+  - event: devCommand:before:portForwarding
+    baseArgs: ["--skip-update", "track", "devCommand:before:portForwarding"]
+  - event: devCommand:after:portForwarding
+    baseArgs: ["--skip-update", "track", "devCommand:after:portForwarding"]
+  - event: devCommand:before:replacePods
+    baseArgs: ["--skip-update", "track", "devCommand:before:replacePods"]
+  - event: devCommand:after:replacePods
+    baseArgs: ["--skip-update", "track", "devCommand:after:replacePods"]
+  - event: devCommand:before:runPipeline
+    baseArgs: ["--skip-update", "track", "devCommand:before:runPipeline"]
+  - event: devCommand:after:runPipeline
+    baseArgs: ["--skip-update", "track", "devCommand:after:runPipeline"]
+  - event: devCommand:before:deployDependencies
+    baseArgs: ["--skip-update", "track", "devCommand:before:deployDependencies"]
+  - event: devCommand:after:deployDependencies
+    baseArgs: ["--skip-update", "track", "devCommand:after:deployDependencies"]
+  - event: devCommand:before:build
+    baseArgs: ["--skip-update", "track", "devCommand:before:build"]
+  - event: devCommand:after:build
+    baseArgs: ["--skip-update", "track", "devCommand:after:build"]
+  - event: devCommand:before:deploy
+    baseArgs: ["--skip-update", "track", "devCommand:before:deploy"]
+  - event: devCommand:after:deploy
+    baseArgs: ["--skip-update", "track", "devCommand:after:deploy"]
+  - event: devCommand:before:execute
+    baseArgs: ["--skip-update", "track", "devCommand:before:execute"]
+  - event: devCommand:after:execute
+    baseArgs: ["--skip-update", "track", "devCommand:after:execute"]
+  - event: devCommand:interrupt
+    baseArgs: ["--skip-update", "track", "devCommand:interrupt"]
+  - event: devCommand:error
+    baseArgs: ["--skip-update", "track", "devCommand:error"]
+  - event: deployCommand:before:execute
+    baseArgs: ["--skip-update", "track", "deployCommand:before:execute"]
+  - event: deployCommand:after:execute
+    baseArgs: ["--skip-update", "track", "deployCommand:after:execute"]
+  - event: deployCommand:error
+    baseArgs: ["--skip-update", "track", "deployCommand:error"]
+  - event: deployCommand:interrupt
+    baseArgs: ["--skip-update", "track", "deployCommand:interrupt"]
+  - event: purgeCommand:before:execute
+    baseArgs: ["--skip-update", "track", "purgeCommand:before:execute"]
+  - event: purgeCommand:after:execute
+    baseArgs: ["--skip-update", "track", "purgeCommand:after:execute"]
+  - event: purgeCommand:error
+    baseArgs: ["--skip-update", "track", "purgeCommand:error"]
+  - event: purgeCommand:interrupt
+    baseArgs: ["--skip-update", "track", "purgeCommand:interrupt"]
+  - event: buildCommand:before:execute
+    baseArgs: ["--skip-update", "track", "buildCommand:before:execute"]
+  - event: buildCommand:after:execute
+    baseArgs: ["--skip-update", "track", "buildCommand:after:execute"]
+  - event: buildCommand:error
+    baseArgs: ["--skip-update", "track", "buildCommand:error"]
+  - event: buildCommand:interrupt
+    baseArgs: ["--skip-update", "track", "buildCommand:interrupt"]
+  - event: command:before:execute
+    baseArgs: ["--skip-update", "track", "command:before:execute"]
+  - event: command:after:execute
+    baseArgs: ["--skip-update", "track", "command:after:execute"]
+  - event: command:error
+    baseArgs: ["--skip-update", "track", "command:error"]
 
 binaries:
   - os: darwin
