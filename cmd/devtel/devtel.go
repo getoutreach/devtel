@@ -9,13 +9,13 @@ package main
 import (
 	"context"
 
-	"github.com/getoutreach/devtel/cmd/devtel/track"
 	oapp "github.com/getoutreach/gobox/pkg/app"
 	gcli "github.com/getoutreach/gobox/pkg/cli"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	// Place any extra imports for your startup code here
 	///Block(imports)
+	"github.com/getoutreach/devtel/cmd/devtel/track"
 	///EndBlock(imports)
 )
 
