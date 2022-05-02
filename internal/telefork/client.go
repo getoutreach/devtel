@@ -2,11 +2,14 @@ package telefork
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
 	"strings"
+
+	"github.com/getoutreach/gobox/pkg/trace"
 )
 
 type Client struct {
@@ -31,23 +34,31 @@ func NewClientWithHTTPClient(appName, apiKey string, client *http.Client) *Clien
 	}
 }
 
-func (c *Client) SendEvents(events []interface{}) error {
+func (c *Client) SendEvents(ctx context.Context, events []interface{}) error {
+	ctx = trace.StartCall(ctx, "telefork.Client.SendEvents")
+	defer trace.EndCall(ctx)
+
 	b, err := json.Marshal(events)
 	if err != nil {
-		return err
+		return trace.SetCallStatus(ctx, err)
 	}
 
-	resp, err := c.http.Post(strings.TrimSuffix(c.baseURL, "/")+"/", "application/json", bytes.NewReader(b))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, strings.TrimSuffix(c.baseURL, "/")+"/", bytes.NewReader(b))
 	if err != nil {
-		return err
+		return trace.SetCallStatus(ctx, err)
+	}
+
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return trace.SetCallStatus(ctx, err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusCreated {
-		return fmt.Errorf("Unexpected status code: %d", resp.StatusCode)
+		return trace.SetCallStatus(ctx, fmt.Errorf("Unexpected status code: %d", resp.StatusCode))
 	}
 
-	return nil
+	return trace.SetCallStatus(ctx, nil)
 }
 
 type Transport struct {

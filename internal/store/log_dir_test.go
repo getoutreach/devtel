@@ -2,6 +2,7 @@ package store
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"testing"
 	"testing/fstest"
@@ -56,12 +57,12 @@ func TestInit(t *testing.T) {
 	}).(*store)
 	s.logDir = ""
 
-	assert.NoError(t, s.Init())
+	assert.NoError(t, s.Init(context.Background()))
 
 	var beforeDeploy, afterDeploy, afterBuild payload
-	assert.NoError(t, s.Get("before:deploy", &beforeDeploy))
-	assert.NoError(t, s.Get("after:deploy", &afterDeploy))
-	assert.NoError(t, s.Get("after:build", &afterBuild))
+	assert.NoError(t, s.Get(context.Background(), "before:deploy", &beforeDeploy))
+	assert.NoError(t, s.Get(context.Background(), "after:deploy", &afterDeploy))
+	assert.NoError(t, s.Get(context.Background(), "after:build", &afterBuild))
 
 	assert.NotEmpty(t, beforeDeploy)
 	assert.NotNil(t, afterDeploy)
@@ -81,15 +82,15 @@ func TestAppendOpener(t *testing.T) {
 		},
 	})
 
-	assert.NoError(t, s.Init())
+	assert.NoError(t, s.Init(context.Background()))
 
-	s.Append(&payload{ID: "before:deploy", Content: "content1"})
-	s.Append(&payload{ID: "after:deploy", Content: "content1"})
+	s.Append(context.Background(), &payload{ID: "before:deploy", Content: "content1"})
+	s.Append(context.Background(), &payload{ID: "after:deploy", Content: "content1"})
 
 	var beforeDeploy, afterDeploy, afterBuild payload
-	s.Get("before:deploy", &beforeDeploy)
-	s.Get("after:deploy", &afterDeploy)
-	s.Get("after:build", &afterBuild)
+	s.Get(context.Background(), "before:deploy", &beforeDeploy)
+	s.Get(context.Background(), "after:deploy", &afterDeploy)
+	s.Get(context.Background(), "after:build", &afterBuild)
 
 	assert.NotEmpty(t, beforeDeploy)
 	assert.NotNil(t, afterDeploy)

@@ -1,6 +1,7 @@
 package telefork
 
 import (
+	"context"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -30,7 +31,7 @@ func TestClientSendsEvents(t *testing.T) {
 
 	os.Setenv("OUTREACH_TELEFORK_ENDPOINT", server.URL)
 	client := NewClientWithHTTPClient("testApp", "testKey", server.Client())
-	err := client.SendEvents([]interface{}{
+	err := client.SendEvents(context.Background(), []interface{}{
 		devspace.Event{Hook: "before:deploy", Timestamp: 2147483605, TimestampTag: time.Unix(2147483605, 0)},
 	})
 	assert.NoError(t, err)

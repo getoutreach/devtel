@@ -16,6 +16,8 @@ type tracker struct {
 type Tracker interface {
 	Init(context.Context) error
 
+	AddDefaultField(string, interface{})
+
 	Track(context.Context, *Event)
 	Flush(context.Context) error
 }
@@ -50,20 +52,24 @@ func (t *tracker) Init(ctx context.Context) error {
 	ctx = trace.StartCall(ctx, "tracker.Init")
 	defer trace.EndCall(ctx)
 
-	return trace.SetCallStatus(ctx, t.s.Init())
+	return trace.SetCallStatus(ctx, t.s.Init(ctx))
+}
+
+func (t *tracker) AddDefaultField(k string, v interface{}) {
+	t.s.AddDefaultField(k, v)
 }
 
 func (t *tracker) Track(ctx context.Context, event *Event) {
 	ctx = trace.StartCall(ctx, "tracker.Track")
 	defer trace.EndCall(ctx)
 
-	if before := t.tryGetBeforeHook(event); before != nil {
+	if before := t.tryGetBeforeHook(ctx, event); before != nil {
 		event = t.combineEvents(before, event)
 	}
 
-	if err := t.s.Append(event); err != nil {
-		//nolint:errcheck // Why? This is how we track it. There's not much else we should do. Definitely not crashing devspace.
-		trace.SetCallError(ctx, err)
+	if err := t.s.Append(ctx, event); err != nil {
+		//nolint:errcheck // Why: This is how we track it. There's not much else we should do. Definitely not crashing devspace.
+		trace.SetCallStatus(ctx, err)
 	}
 }
 
@@ -71,7 +77,7 @@ func (t *tracker) Flush(ctx context.Context) error {
 	ctx = trace.StartCall(ctx, "tracker.Flush")
 	defer trace.EndCall(ctx)
 
-	cursor := t.s.GetUnprocessed()
+	cursor := t.s.GetUnprocessed(ctx)
 	// Generics are bad. bad. We don't want generics.
 	var events []store.IndexMarshaller
 	var toProcess []interface{}
@@ -88,13 +94,13 @@ func (t *tracker) Flush(ctx context.Context) error {
 
 	err := t.p.ProcessRecords(ctx, toProcess)
 	if err != nil {
-		return trace.SetCallError(ctx, err)
+		return trace.SetCallStatus(ctx, err)
 	}
 
-	return trace.SetCallStatus(ctx, t.s.MarkProcessed(events))
+	return trace.SetCallStatus(ctx, t.s.MarkProcessed(ctx, events))
 }
 
-func (t *tracker) tryGetBeforeHook(event *Event) *Event {
+func (t *tracker) tryGetBeforeHook(ctx context.Context, event *Event) *Event {
 	beforeHook := getBeforeHook(event.Hook)
 	if beforeHook == "" {
 		return nil
@@ -106,7 +112,7 @@ func (t *tracker) tryGetBeforeHook(event *Event) *Event {
 	}
 
 	var val Event
-	if err := t.s.Get(beforeKey, &val); err != nil {
+	if err := t.s.Get(ctx, beforeKey, &val); err != nil {
 		return nil
 	}
 	return &val

@@ -1,6 +1,7 @@
 package store
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"testing"
@@ -58,8 +59,8 @@ func TestStoreAppend(t *testing.T) {
 		OpenAppend: openAppender(&buff),
 	})
 
-	assert.Nil(t, s.Append(&payload{ID: "id1"}))
-	assert.Nil(t, s.Append(&payload{ID: "id2"}))
+	assert.Nil(t, s.Append(context.Background(), &payload{ID: "id1"}))
+	assert.Nil(t, s.Append(context.Background(), &payload{ID: "id2"}))
 
 	expected := "" +
 		`{"key":"id1","data":{"id":"id1"}}` + "\n" +
@@ -74,12 +75,12 @@ func TestStoreGet(t *testing.T) {
 		OpenAppend: openAppender(&buff),
 	})
 
-	assert.Nil(t, s.Append(&payload{ID: "id1"}))
-	assert.Nil(t, s.Append(&payload{ID: "id2"}))
-	assert.Nil(t, s.Append(&payload{ID: "id1", Content: "content1"}))
+	assert.Nil(t, s.Append(context.Background(), &payload{ID: "id1"}))
+	assert.Nil(t, s.Append(context.Background(), &payload{ID: "id2"}))
+	assert.Nil(t, s.Append(context.Background(), &payload{ID: "id1", Content: "content1"}))
 
 	var val payload
-	s.Get("id1", &val)
+	s.Get(context.Background(), "id1", &val)
 	assert.NotEmpty(t, val)
 	assert.Equal(t, "content1", val.Content)
 }
@@ -90,11 +91,11 @@ func TestStoreGetAll(t *testing.T) {
 		OpenAppend: openAppender(&buff),
 	})
 
-	assert.Nil(t, s.Append(&payload{ID: "id1"}))
-	assert.Nil(t, s.Append(&payload{ID: "id2"}))
-	assert.Nil(t, s.Append(&payload{ID: "id1", Content: "content1"}))
+	assert.Nil(t, s.Append(context.Background(), &payload{ID: "id1"}))
+	assert.Nil(t, s.Append(context.Background(), &payload{ID: "id2"}))
+	assert.Nil(t, s.Append(context.Background(), &payload{ID: "id1", Content: "content1"}))
 
-	cursor := s.GetAll()
+	cursor := s.GetAll(context.Background())
 	assert.Equal(t, 2, cursor.Len())
 
 	var curr payload
@@ -115,11 +116,11 @@ func TestStoreGetUnprocessed(t *testing.T) {
 		OpenAppend: openAppender(&buff),
 	})
 
-	assert.Nil(t, s.Append(&payload{ID: "id1"}))
-	assert.Nil(t, s.Append(&payload{ID: "id2"}))
-	assert.Nil(t, s.Append(&payload{ID: "id1", Content: "content1"}))
+	assert.Nil(t, s.Append(context.Background(), &payload{ID: "id1"}))
+	assert.Nil(t, s.Append(context.Background(), &payload{ID: "id2"}))
+	assert.Nil(t, s.Append(context.Background(), &payload{ID: "id1", Content: "content1"}))
 
-	cursor := s.GetAll()
+	cursor := s.GetAll(context.Background())
 	assert.Equal(t, 2, cursor.Len())
 
 	var curr payload
@@ -136,8 +137,22 @@ func TestStoreGetUnprocessed(t *testing.T) {
 	toProcess := []IndexMarshaller{
 		&payload{ID: "id1", Content: "content1"},
 	}
-	assert.NoError(t, s.MarkProcessed(toProcess))
-	cursor = s.GetUnprocessed()
+	assert.NoError(t, s.MarkProcessed(context.Background(), toProcess))
+	cursor = s.GetUnprocessed(context.Background())
 
 	assert.Equal(t, cursor.Len(), 1)
+}
+
+func TestAddDefaultField(t *testing.T) {
+	var buff TestClosableBuffer
+	s := New(&Options{
+		OpenAppend: openAppender(&buff),
+	})
+
+	s.AddDefaultField("dev.email", "yoda@outreach.io")
+
+	assert.NoError(t, s.Append(context.Background(), &payload{ID: "id1"}))
+	expected := `{"key":"id1","data":{"dev":{"email":"yoda@outreach.io"},"id":"id1"}}` + "\n"
+
+	assert.Equal(t, expected, buff.String())
 }

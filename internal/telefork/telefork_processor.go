@@ -13,5 +13,5 @@ func NewProcessor(appName, apiKey string) *Processor {
 }
 
 func (p *Processor) ProcessRecords(ctx context.Context, events []interface{}) error {
-	return p.client.SendEvents(events)
+	return p.client.SendEvents(ctx, events)
 }
