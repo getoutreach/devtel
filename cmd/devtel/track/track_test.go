@@ -8,13 +8,15 @@ import (
 	"regexp"
 	"testing"
 
+	"github.com/getoutreach/gobox/pkg/log"
+	"github.com/stretchr/testify/assert"
 	"github.com/urfave/cli/v2"
 
 	"github.com/getoutreach/devtel/cmd/devtel/track"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestTrackEvent(t *testing.T) {
+	log.SetOutput(io.Discard)
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, "devtel", r.Header.Get("X-OUTREACH-CLIENT-APP-ID"))
 		assert.Equal(t, "testKey", r.Header.Get("X-OUTREACH-CLIENT-LOGGING"))
@@ -27,7 +29,7 @@ func TestTrackEvent(t *testing.T) {
 		//nolint // Why: Comparing actual value, the string is long.
 		pattern, err := regexp.Compile(`^\[{"event":"devspace_hook","hook":"before:build","execution_id":"031cb474-c2f4-433f-863e-684c35c8d5ac","status":"info","command":{"name":"deploy","line":"devspace deploy \[flags\]","flags":\["--namespace","yoda--bento1a","--no-warn"\]},"timestamp":\d+,"@timestamp":"[^"]+"}\]$`)
 		assert.NoError(t, err)
-		assert.Regexp(t, pattern, string(b), string(b))
+		assert.Regexp(t, pattern, string(b))
 
 		w.WriteHeader(http.StatusCreated)
 	}))
