@@ -118,7 +118,6 @@ func (t *tracker) Flush(ctx context.Context) error {
 	for cursor.Next() {
 		b := make(eventBag)
 		if err := cursor.Value(&b); err != nil {
-			// TODO: probably should logs something here
 			continue
 		}
 

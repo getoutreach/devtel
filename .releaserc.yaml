@@ -23,3 +23,7 @@ plugins:
     - assets:
         - "dist/*.tar.gz"
         - "dist/checksums.txt"
+  - - "@semantic-release/git"
+    - assets:
+        - "plugin.yaml"
+      message: "chore(release): ${nextRelease.version}\n\n${nextRelease.notes}"
