@@ -203,8 +203,6 @@ func (s *store) restore(r io.Reader) error {
 		var e entry
 
 		if err := json.Unmarshal(scanner.Bytes(), &e); err != nil {
-			fmt.Println("Scanner.Text:")
-			fmt.Println(scanner.Text())
 			return errors.Wrap(err, "failed to unmarshal entry")
 		}
 		if e.Key == "" {

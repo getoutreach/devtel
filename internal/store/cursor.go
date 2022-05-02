@@ -28,8 +28,6 @@ func (c *Cursor) Value(v IndexMarshaller) error {
 		return fmt.Errorf("cursor is not positioned")
 	}
 
-	fmt.Println("current index:", c.currIndex)
-
 	return v.UnmarshalRecord(c.items[c.currIndex])
 }
 

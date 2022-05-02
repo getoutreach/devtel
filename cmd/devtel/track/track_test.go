@@ -25,9 +25,9 @@ func TestTrackEvent(t *testing.T) {
 		assert.NoError(t, err)
 
 		//nolint // Why: Comparing actual value, the string is long.
-		pattern, err := regexp.Compile(`^\[{"event":"devspace_hook","hook":"before:build","execution_id":"031cb474-c2f4-433f-863e-684c35c8d5ac","status":"info","command":{"name":"deploy","line":"devspace deploy \[flags\]","flags":\["--namespace","yoda--bento1a","--no-warn"\]},"timestamp":\d+}\]$`)
+		pattern, err := regexp.Compile(`^\[{"event":"devspace_hook","hook":"before:build","execution_id":"031cb474-c2f4-433f-863e-684c35c8d5ac","status":"info","command":{"name":"deploy","line":"devspace deploy \[flags\]","flags":\["--namespace","yoda--bento1a","--no-warn"\]},"timestamp":\d+,"@timestamp":"[^"]+"}\]$`)
 		assert.NoError(t, err)
-		assert.Regexp(t, pattern, string(b))
+		assert.Regexp(t, pattern, string(b), string(b))
 
 		w.WriteHeader(http.StatusCreated)
 	}))

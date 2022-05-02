@@ -1,5 +1,7 @@
 package devspace
 
+import "context"
+
 type Processor interface {
-	ProcessRecords([]interface{}) error
+	ProcessRecords(context.Context, []interface{}) error
 }
