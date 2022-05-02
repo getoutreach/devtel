@@ -1,6 +1,7 @@
 package devspace
 
 import (
+	"context"
 	"encoding/json"
 	"io"
 	"testing"
@@ -84,7 +85,7 @@ func TestEventWrittenToBuffer(t *testing.T) {
 
 	var before Event
 	assert.NoError(t, json.Unmarshal([]byte(beforeEvent), &before))
-	r.Track(&before)
+	r.Track(context.Background(), &before)
 
 	var b Event
 	assert.NoError(t, s.Get("9714f00a-b998-49e7-97a9-a8e2051905f7_before:deploy", &b))
@@ -104,8 +105,8 @@ func TestEventMatched(t *testing.T) {
 	assert.NoError(t, json.Unmarshal([]byte(beforeEvent), &before))
 	assert.NoError(t, json.Unmarshal([]byte(afterEvent), &after))
 
-	r.Track(&before)
-	r.Track(&after)
+	r.Track(context.Background(), &before)
+	r.Track(context.Background(), &after)
 
 	assert.NoError(t, s.Get("9714f00a-b998-49e7-97a9-a8e2051905f7_after:deploy", &after))
 	assert.Equal(t, int64(9046), after.Duration)
@@ -125,11 +126,11 @@ func TestCanUseRestoredEvents(t *testing.T) {
 		},
 	})
 	r := NewTracker(p, WithStore(s))
-	assert.NoError(t, r.Init())
+	assert.NoError(t, r.Init(context.Background()))
 
 	var after Event
 	assert.NoError(t, json.Unmarshal([]byte(afterEvent), &after))
-	r.Track(&after)
+	r.Track(context.Background(), &after)
 
 	assert.NoError(t, s.Get("9714f00a-b998-49e7-97a9-a8e2051905f7_after:deploy", &after))
 	assert.Equal(t, int64(9046), after.Duration)
@@ -149,12 +150,12 @@ func TestCanProcessEvents(t *testing.T) {
 	assert.NoError(t, json.Unmarshal([]byte(beforeEvent), &before))
 	assert.NoError(t, json.Unmarshal([]byte(afterEvent), &after))
 
-	r.Track(&before)
-	r.Track(&after)
+	r.Track(context.Background(), &before)
+	r.Track(context.Background(), &after)
 
-	assert.NoError(t, r.Flush())
+	assert.NoError(t, r.Flush(context.Background()))
 	assert.Len(t, p.lastBatch, 2)
 
-	assert.NoError(t, r.Flush())
+	assert.NoError(t, r.Flush(context.Background()))
 	assert.Len(t, p.lastBatch, 0)
 }

@@ -82,8 +82,9 @@ type Event struct {
 
 	Command *Command `json:"command,omitempty"`
 
-	Timestamp int64 `json:"timestamp"`
-	Duration  int64 `json:"duration_ms,omitempty"`
+	Timestamp    int64     `json:"timestamp"`
+	TimestampTag time.Time `json:"@timestamp,omitempty"`
+	Duration     int64     `json:"duration_ms,omitempty"`
 }
 
 func (e *Event) Key() string {
@@ -98,11 +99,16 @@ func (e *Event) MarshalRecord(addField func(name string, value interface{})) {
 	addField("event", e.Name)
 	addField("hook", e.Hook)
 	addField("execution_id", e.ExecutionID)
+
 	if e.Error != "" {
 		addField("error", e.Error)
 	}
 	addField("status", e.Status)
+
 	addField("timestamp", e.Timestamp)
+	if !e.TimestampTag.IsZero() {
+		addField("@timestamp", e.TimestampTag)
+	}
 	if e.Duration != 0 {
 		addField("duration_ms", e.Duration)
 	}
@@ -110,80 +116,104 @@ func (e *Event) MarshalRecord(addField func(name string, value interface{})) {
 	if e.Command != nil {
 		addField("command.name", e.Command.Name)
 		addField("command.line", e.Command.Line)
-		addField("command.flags", e.Command.Flags)
-		addField("command.args", e.Command.Args)
+		if len(e.Command.Flags) > 0 {
+			addField("command.flags", e.Command.Flags)
+		}
+		if len(e.Command.Args) > 0 {
+			addField("command.args", e.Command.Args)
+		}
 	}
 }
 
+//nolint:funlen //Why? It's one func dealing with one entity
 func (e *Event) UnmarshalRecord(data map[string]interface{}) error {
-	if val, ok := data["event"]; ok {
-		e.Name = val.(string)
-	}
-	if val, ok := data["hook"]; ok {
-		e.Hook = val.(string)
-	}
-	if val, ok := data["execution_id"]; ok {
-		e.ExecutionID = val.(string)
+	b, err := json.Marshal(data)
+	if err != nil {
+		return err
 	}
 
-	if val, ok := data["error"]; ok {
-		e.Error = val.(string)
-	}
-	if val, ok := data["status"]; ok {
-		e.Status = val.(string)
-	}
-
-	if val, ok := data["command"]; ok {
-		if cmd, ok := val.(map[string]interface{}); ok {
-			e.Command = &Command{}
-			if val, ok := cmd["name"]; ok {
-				e.Command.Name = val.(string)
-			}
-			if val, ok := cmd["line"]; ok {
-				e.Command.Line = val.(string)
-			}
-			if val, ok := cmd["flags"]; ok {
-				switch val := val.(type) {
-				case []interface{}:
-					for _, v := range val {
-						e.Command.Flags = append(e.Command.Flags, v.(string))
-					}
-				case []string:
-					e.Command.Flags = val
-				}
-			}
-			if val, ok := cmd["args"]; ok {
-				switch val := val.(type) {
-				case []interface{}:
-					for _, v := range val {
-						e.Command.Args = append(e.Command.Args, v.(string))
-					}
-				case []string:
-					e.Command.Args = val
-				}
-			}
-		}
-	}
-
-	if val, ok := data["timestamp"]; ok {
-		switch t := val.(type) {
-		case float64:
-			e.Timestamp = int64(t)
-		case int64:
-			e.Timestamp = t
-		}
-	}
-	if val, ok := data["duration_ms"]; ok {
-		switch t := val.(type) {
-		case float64:
-			e.Duration = int64(t)
-		case int64:
-			e.Duration = t
-		}
-	}
-
-	return nil
+	return json.Unmarshal(b, e)
 }
+
+// func (e *Event) UnmarshalRecord(data map[string]interface{}) error {
+// 	if val, ok := data["event"]; ok {
+// 		e.Name = val.(string)
+// 	}
+// 	if val, ok := data["hook"]; ok {
+// 		e.Hook = val.(string)
+// 	}
+// 	if val, ok := data["execution_id"]; ok {
+// 		e.ExecutionID = val.(string)
+// 	}
+
+// 	if val, ok := data["error"]; ok {
+// 		e.Error = val.(string)
+// 	}
+// 	if val, ok := data["status"]; ok {
+// 		e.Status = val.(string)
+// 	}
+
+// 	if val, ok := data["command"]; ok {
+// 		if cmd, ok := val.(map[string]interface{}); ok {
+// 			e.Command = &Command{}
+// 			if val, ok := cmd["name"]; ok {
+// 				e.Command.Name = val.(string)
+// 			}
+// 			if val, ok := cmd["line"]; ok {
+// 				e.Command.Line = val.(string)
+// 			}
+// 			if val, ok := cmd["flags"]; ok {
+// 				switch val := val.(type) {
+// 				case []interface{}:
+// 					for _, v := range val {
+// 						e.Command.Flags = append(e.Command.Flags, v.(string))
+// 					}
+// 				case []string:
+// 					e.Command.Flags = val
+// 				}
+// 			}
+// 			if val, ok := cmd["args"]; ok {
+// 				switch val := val.(type) {
+// 				case []interface{}:
+// 					for _, v := range val {
+// 						e.Command.Args = append(e.Command.Args, v.(string))
+// 					}
+// 				case []string:
+// 					e.Command.Args = val
+// 				}
+// 			}
+// 		}
+// 	}
+
+// 	if val, ok := data["timestamp"]; ok {
+// 		switch t := val.(type) {
+// 		case float64:
+// 			e.Timestamp = int64(t)
+// 		case int64:
+// 			e.Timestamp = t
+// 		}
+// 	}
+// 	if val, ok := data["@timestamp"]; ok {
+// 		switch t := val.(type) {
+// 		case time.Time:
+// 			e.TimestampTag = t
+// 		case string:
+// 			if t, err := time.Parse(time.RFC3339Nano, t); err == nil {
+// 				e.TimestampTag = t
+// 			}
+// 		}
+// 	}
+// 	if val, ok := data["duration_ms"]; ok {
+// 		switch t := val.(type) {
+// 		case float64:
+// 			e.Duration = int64(t)
+// 		case int64:
+// 			e.Duration = t
+// 		}
+// 	}
+
+// 	return nil
+// }
 
 func EventFromEnv() *Event {
 	var flags, args []string
@@ -200,6 +230,8 @@ func EventFromEnv() *Event {
 		status = "error"
 	}
 
+	t := time.Now()
+
 	return &Event{
 		Name:        "devspace_hook",
 		Hook:        os.Getenv("DEVSPACE_PLUGIN_EVENT"),
@@ -214,6 +246,7 @@ func EventFromEnv() *Event {
 			Args:  args,
 		},
 
-		Timestamp: time.Now().UnixMilli(),
+		Timestamp:    t.UnixMilli(),
+		TimestampTag: t,
 	}
 }

@@ -1,6 +1,7 @@
 package telefork
 
 import (
+	"context"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -21,7 +22,7 @@ func TestTeleforkProcessor(t *testing.T) {
 		b, err := io.ReadAll(r.Body)
 		assert.NoError(t, err)
 
-		assert.Equal(t, `[{"hook":"before:deploy","timestamp":2147483605}]`, string(b))
+		assert.Equal(t, `[{"hook":"before:deploy","timestamp":2147483605,"@timestamp":"0001-01-01T00:00:00Z"}]`, string(b))
 
 		w.WriteHeader(http.StatusCreated)
 	}))
@@ -34,7 +35,7 @@ func TestTeleforkProcessor(t *testing.T) {
 		client: client,
 	}
 
-	tp.ProcessRecords([]interface{}{
+	tp.ProcessRecords(context.Background(), []interface{}{
 		devspace.Event{Hook: "before:deploy", Timestamp: 2147483605},
 	})
 }

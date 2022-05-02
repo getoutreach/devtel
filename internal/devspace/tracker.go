@@ -1,9 +1,11 @@
 package devspace
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/getoutreach/devtel/internal/store"
+	"github.com/getoutreach/gobox/pkg/trace"
 )
 
 type tracker struct {
@@ -12,10 +14,10 @@ type tracker struct {
 }
 
 type Tracker interface {
-	Init() error
+	Init(context.Context) error
 
-	Track(*Event)
-	Flush() error
+	Track(context.Context, *Event)
+	Flush(context.Context) error
 }
 
 type Options struct {
@@ -44,11 +46,17 @@ func WithStore(s store.Store) func(opts *Options) {
 	}
 }
 
-func (t *tracker) Init() error {
+func (t *tracker) Init(ctx context.Context) error {
+	ctx = trace.StartCall(ctx, "tracker.Init")
+	defer trace.EndCall(ctx)
+
 	return t.s.Init()
 }
 
-func (t *tracker) Track(event *Event) {
+func (t *tracker) Track(ctx context.Context, event *Event) {
+	ctx = trace.StartCall(ctx, "tracker.Track")
+	defer trace.EndCall(ctx)
+
 	if before := t.tryGetBeforeHook(event); before != nil {
 		event = t.combineEvents(before, event)
 	}
@@ -58,7 +66,10 @@ func (t *tracker) Track(event *Event) {
 	}
 }
 
-func (t *tracker) Flush() error {
+func (t *tracker) Flush(ctx context.Context) error {
+	ctx = trace.StartCall(ctx, "tracker.Flush")
+	defer trace.EndCall(ctx)
+
 	cursor := t.s.GetUnprocessed()
 	// Generics are bad. bad. We don't want generics.
 	var events []store.IndexMarshaller
@@ -74,7 +85,7 @@ func (t *tracker) Flush() error {
 		toProcess = append(toProcess, &event)
 	}
 
-	err := t.p.ProcessRecords(toProcess)
+	err := t.p.ProcessRecords(ctx, toProcess)
 	if err != nil {
 		return err
 	}
