@@ -23,7 +23,7 @@ func TestClientSendsEvents(t *testing.T) {
 		b, err := io.ReadAll(r.Body)
 		assert.NoError(t, err)
 
-		assert.Equal(t, `[{"hook":"before:deploy","timestamp":2147483605,"@timestamp":"2038-01-18T19:13:25-08:00"}]`, string(b))
+		assert.Equal(t, `[{"hook":"before:deploy","timestamp":2147483605,"@timestamp":"0001-01-01T00:00:00Z"}]`, string(b))
 
 		w.WriteHeader(http.StatusCreated)
 	}))
@@ -32,7 +32,7 @@ func TestClientSendsEvents(t *testing.T) {
 	os.Setenv("OUTREACH_TELEFORK_ENDPOINT", server.URL)
 	client := NewClientWithHTTPClient("testApp", "testKey", server.Client())
 	err := client.SendEvents(context.Background(), []interface{}{
-		devspace.Event{Hook: "before:deploy", Timestamp: 2147483605, TimestampTag: time.Unix(2147483605, 0)},
+		devspace.Event{Hook: "before:deploy", Timestamp: 2147483605, TimestampTag: time.Time{}},
 	})
 	assert.NoError(t, err)
 }
