@@ -50,7 +50,7 @@ func (t *tracker) Init(ctx context.Context) error {
 	ctx = trace.StartCall(ctx, "tracker.Init")
 	defer trace.EndCall(ctx)
 
-	return t.s.Init()
+	return trace.SetCallStatus(ctx, t.s.Init())
 }
 
 func (t *tracker) Track(ctx context.Context, event *Event) {
@@ -62,7 +62,8 @@ func (t *tracker) Track(ctx context.Context, event *Event) {
 	}
 
 	if err := t.s.Append(event); err != nil {
-		panic(err)
+		//nolint:errcheck // Why? This is how we track it. There's not much else we should do. Definitely not crashing devspace.
+		trace.SetCallError(ctx, err)
 	}
 }
 
@@ -87,10 +88,10 @@ func (t *tracker) Flush(ctx context.Context) error {
 
 	err := t.p.ProcessRecords(ctx, toProcess)
 	if err != nil {
-		return err
+		return trace.SetCallError(ctx, err)
 	}
 
-	return t.s.MarkProcessed(events)
+	return trace.SetCallStatus(ctx, t.s.MarkProcessed(events))
 }
 
 func (t *tracker) tryGetBeforeHook(event *Event) *Event {

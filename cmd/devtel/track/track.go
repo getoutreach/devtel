@@ -1,9 +1,6 @@
 package track
 
 import (
-	"encoding/json"
-	"os"
-
 	"github.com/urfave/cli/v2"
 
 	"github.com/getoutreach/devtel/internal/devspace"
@@ -23,10 +20,6 @@ func NewCmd(teleforkAPIKey string) *cli.Command {
 			defer t.Flush(c.Context)
 
 			event := devspace.EventFromEnv()
-
-			//nolint
-			json.NewEncoder(os.Stdout).Encode(event)
-
 			t.Track(c.Context, event)
 
 			return nil
