@@ -1,9 +1,6 @@
 name: devtel
 version: 0.0.1
 
-# TODO: Figure out versioning, deployment, and downloading releases.
-# TODO: Delete old log files
-
 hooks:
   - event: before:build
     baseArgs: ["--skip-update", "track", "before:build"]
@@ -181,9 +178,13 @@ hooks:
 binaries:
   - os: darwin
     arch: amd64
-    # can be either an URL or local path
-    path: ./bin/devtel
+    path: https://github.com/getoutreach/devtel/releases/download/v0.0.1/devtel_darwin_amd64/devtel
   - os: darwin
     arch: arm64
-    # can be either an URL or local path
-    path: ./bin/devtel
+    path: https://github.com/getoutreach/devtel/releases/download/v0.0.1/devtel_darwin_arm64/devtel
+  - os: linux
+    arch: amd64
+    path: https://github.com/getoutreach/devtel/releases/download/v0.0.1/devtel_linux_amd64/devtel
+  - os: linux
+    arch: arm64
+    path: https://github.com/getoutreach/devtel/releases/download/v0.0.1/devtel_linux_arm64/devtel

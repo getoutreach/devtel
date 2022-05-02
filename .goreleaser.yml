@@ -18,7 +18,9 @@ builds:
       - '-X "main.TeleforkAPIKey={{ .Env.TELEFORK_APIKEY }}"'
     env:
       - CGO_ENABLED=0
-archives: []
+archives:
+  - id: &name devtel
+    format: binary
 checksum:
   name_template: "checksums.txt"
 release:
