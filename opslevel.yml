@@ -31,7 +31,7 @@ service:
     - key: name
       value: devtel
     - key: bootstrap_version
-      value: "v9.37.0-rc.25"
+      value: "v9.37.0-rc.26"
     - key: golang_version
       value: "1.17.9"
     - key: library

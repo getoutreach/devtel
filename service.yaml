@@ -22,6 +22,9 @@ arguments:
     required: []
   description: Devspace telemetry plugin
   grpcClients: []
+  kubernetes:
+    groups: []
+  lintroller: platinum
   opslevel:
     confluenceSpaceKey: DTSS
     datadogDashboards:
@@ -34,8 +37,15 @@ arguments:
   reportingTeam: fnd-dtss
   type:
     - library
+  vaultSecrets:
+    - deploy/honeycomb_new/%(environment)s/honeycomb
+    - deploy/launchdarkly/%(environment)s/launchdarkly
+    - deploy/mint/%(environment)s/validation/mint-validator-payload
+    - deploy/flagship-shared-secret/%(environment)s/authn-flagship-payload
 modules:
   - name: github.com/getoutreach/stencil-base
+    version: v0.2.1-rc.1
+  - name: github.com/getoutreach/stencil-golang
 opsLevel:
   serviceTier: 0
   lifecycle: ""
