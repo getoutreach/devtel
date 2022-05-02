@@ -8,6 +8,7 @@ import (
 	"testing/fstest"
 
 	"github.com/getoutreach/devtel/internal/store"
+	"github.com/getoutreach/gobox/pkg/log"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -57,6 +58,8 @@ var afterEvent = `{
 // Unmarshal and marshal back, but without indentation.
 //nolint:gochecknoinits // Why: helps understand the test data
 func init() {
+	log.SetOutput(io.Discard)
+
 	normalize := func(orig string) string {
 		var event Event
 		if err := json.Unmarshal([]byte(orig), &event); err != nil {
