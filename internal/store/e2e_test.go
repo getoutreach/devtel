@@ -17,13 +17,17 @@ type testEvent struct {
 	ID string `json:"id"`
 }
 
-func id(val interface{}) string {
-	return val.(testEvent).ID
+func (e testEvent) Key() string {
+	return e.ID
 }
-func restore(val map[string]interface{}) interface{} {
-	return testEvent{
-		ID: val["id"].(string),
-	}
+func (e *testEvent) MarshalRecord(addField func(name string, value interface{})) {
+	addField("id", e.ID)
+}
+
+func (e *testEvent) UnmarshalRecord(data map[string]interface{}) error {
+	e.ID = data["id"].(string)
+
+	return nil
 }
 
 func TestStoreData(t *testing.T) {
@@ -62,32 +66,31 @@ func TestStoreData(t *testing.T) {
 }
 
 func appendToFile(t *testing.T) {
-	s := store.New(id, &store.Options{
-		LogDir:           tmpDir,
-		RestoreConverter: restore,
+	s := store.New(&store.Options{
+		LogDir: tmpDir,
 	})
 	assert.NoError(t, s.Init())
-	assert.NoError(t, s.Append(testEvent{ID: eventID}))
+	assert.NoError(t, s.Append(&testEvent{ID: eventID}))
 }
 
 func restoreFormFile(t *testing.T) {
-	s := store.New(id, &store.Options{
-		LogDir:           tmpDir,
-		RestoreConverter: restore,
+	s := store.New(&store.Options{
+		LogDir: tmpDir,
 	})
 	assert.NoError(t, s.Init())
-
-	assert.NotNil(t, s.Get(eventID))
+	var e testEvent
+	s.Get(eventID, &e)
+	assert.NotEmpty(t, e)
 }
 
 func processEvents(t *testing.T) {
-	s := store.New(id, &store.Options{
-		LogDir:           tmpDir,
-		RestoreConverter: restore,
+	s := store.New(&store.Options{
+		LogDir: tmpDir,
 	})
 	assert.NoError(t, s.Init())
-	id1 := s.Get(eventID)
+	var id1 testEvent
+	s.Get(eventID, &id1)
 	assert.NotNil(t, id1)
 
-	s.MarkProcessed([]interface{}{id1})
+	s.MarkProcessed([]store.IndexMarshaller{&id1})
 }

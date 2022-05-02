@@ -86,64 +86,103 @@ type Event struct {
 	Duration  int64 `json:"duration_ms,omitempty"`
 }
 
-func eventKey(e interface{}) string {
-	event := e.(*Event)
-	if event.ExecutionID == "" {
-		return event.Hook
+func (e *Event) Key() string {
+	if e.ExecutionID == "" {
+		return e.Hook
 	}
 
-	return fmt.Sprintf("%s_%s", e.(*Event).ExecutionID, e.(*Event).Hook)
+	return fmt.Sprintf("%s_%s", e.ExecutionID, e.Hook)
 }
-func eventFromMap(m map[string]interface{}) interface{} {
-	var event Event
 
-	if val, ok := m["event_name"]; ok {
-		event.Name = val.(string)
+func (e *Event) MarshalRecord(addField func(name string, value interface{})) {
+	addField("event", e.Name)
+	addField("hook", e.Hook)
+	addField("execution_id", e.ExecutionID)
+	if e.Error != "" {
+		addField("error", e.Error)
 	}
-	if val, ok := m["hook"]; ok {
-		event.Hook = val.(string)
-	}
-	if val, ok := m["execution_id"]; ok {
-		event.ExecutionID = val.(string)
-	}
-
-	if val, ok := m["error"]; ok {
-		event.Error = val.(string)
-	}
-	if val, ok := m["status"]; ok {
-		event.Status = val.(string)
+	addField("status", e.Status)
+	addField("timestamp", e.Timestamp)
+	if e.Duration != 0 {
+		addField("duration_ms", e.Duration)
 	}
 
-	if val, ok := m["command"]; ok {
+	if e.Command != nil {
+		addField("command.name", e.Command.Name)
+		addField("command.line", e.Command.Line)
+		addField("command.flags", e.Command.Flags)
+		addField("command.args", e.Command.Args)
+	}
+}
+
+func (e *Event) UnmarshalRecord(data map[string]interface{}) error {
+	if val, ok := data["event"]; ok {
+		e.Name = val.(string)
+	}
+	if val, ok := data["hook"]; ok {
+		e.Hook = val.(string)
+	}
+	if val, ok := data["execution_id"]; ok {
+		e.ExecutionID = val.(string)
+	}
+
+	if val, ok := data["error"]; ok {
+		e.Error = val.(string)
+	}
+	if val, ok := data["status"]; ok {
+		e.Status = val.(string)
+	}
+
+	if val, ok := data["command"]; ok {
 		if cmd, ok := val.(map[string]interface{}); ok {
-			event.Command = &Command{}
+			e.Command = &Command{}
 			if val, ok := cmd["name"]; ok {
-				event.Command.Name = val.(string)
+				e.Command.Name = val.(string)
 			}
 			if val, ok := cmd["line"]; ok {
-				event.Command.Line = val.(string)
+				e.Command.Line = val.(string)
 			}
 			if val, ok := cmd["flags"]; ok {
-				for _, flag := range val.([]interface{}) {
-					event.Command.Flags = append(event.Command.Flags, flag.(string))
+				switch val := val.(type) {
+				case []interface{}:
+					for _, v := range val {
+						e.Command.Flags = append(e.Command.Flags, v.(string))
+					}
+				case []string:
+					e.Command.Flags = val
 				}
 			}
 			if val, ok := cmd["args"]; ok {
-				for _, arg := range val.([]interface{}) {
-					event.Command.Args = append(event.Command.Args, arg.(string))
+				switch val := val.(type) {
+				case []interface{}:
+					for _, v := range val {
+						e.Command.Args = append(e.Command.Args, v.(string))
+					}
+				case []string:
+					e.Command.Args = val
 				}
 			}
 		}
 	}
 
-	if val, ok := m["timestamp"]; ok {
-		event.Timestamp = int64(val.(float64))
+	if val, ok := data["timestamp"]; ok {
+		switch t := val.(type) {
+		case float64:
+			e.Timestamp = int64(t)
+		case int64:
+			e.Timestamp = t
+		}
 	}
-	if val, ok := m["duration_ms"]; ok {
-		event.Duration = int64(val.(float64))
+	if val, ok := data["duration_ms"]; ok {
+		switch t := val.(type) {
+		case float64:
+			e.Duration = int64(t)
+		case int64:
+			e.Duration = t
+		}
 	}
 
-	return &event
+	return nil
 }
 
 func EventFromEnv() *Event {

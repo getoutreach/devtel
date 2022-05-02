@@ -1,6 +1,7 @@
 package store
 
 import (
+	"fmt"
 	"io"
 	"testing"
 
@@ -8,12 +9,41 @@ import (
 )
 
 type payload struct {
-	ID      string `json:"id"`
-	Content string `json:"content,omitempty"`
+	ID        string `json:"id"`
+	Content   string `json:"content,omitempty"`
+	Timestamp int64  `json:"timestamp"`
 }
 
-func payloadID(data interface{}) string {
-	return data.(payload).ID
+func (p *payload) Key() string {
+	return p.ID
+}
+func (p *payload) MarshalRecord(addField func(name string, value interface{})) {
+	addField("id", p.ID)
+	if p.Content != "" {
+		addField("content", p.Content)
+	}
+}
+
+func (p *payload) UnmarshalRecord(data map[string]interface{}) error {
+	if id, ok := data["id"]; ok && id.(string) != "" {
+		p.ID = id.(string)
+	} else {
+		return fmt.Errorf("payload requires ID (%v)", data)
+	}
+
+	if content, ok := data["content"]; ok {
+		p.Content = content.(string)
+	}
+	if timestamp, ok := data["timestamp"]; ok {
+		switch t := timestamp.(type) {
+		case float64:
+			p.Timestamp = int64(t)
+		case int64:
+			p.Timestamp = t
+		}
+	}
+
+	return nil
 }
 
 func openAppender(buff *TestClosableBuffer) func(path string) (io.WriteCloser, error) {
@@ -24,12 +54,12 @@ func openAppender(buff *TestClosableBuffer) func(path string) (io.WriteCloser, e
 
 func TestStoreAppend(t *testing.T) {
 	var buff TestClosableBuffer
-	s := New(payloadID, &Options{
+	s := New(&Options{
 		OpenAppend: openAppender(&buff),
 	})
 
-	assert.Nil(t, s.Append(payload{ID: "id1"}))
-	assert.Nil(t, s.Append(payload{ID: "id2"}))
+	assert.Nil(t, s.Append(&payload{ID: "id1"}))
+	assert.Nil(t, s.Append(&payload{ID: "id2"}))
 
 	expected := "" +
 		`{"key":"id1","data":{"id":"id1"}}` + "\n" +
@@ -40,57 +70,74 @@ func TestStoreAppend(t *testing.T) {
 
 func TestStoreGet(t *testing.T) {
 	var buff TestClosableBuffer
-	s := New(payloadID, &Options{
+	s := New(&Options{
 		OpenAppend: openAppender(&buff),
 	})
 
-	assert.Nil(t, s.Append(payload{ID: "id1"}))
-	assert.Nil(t, s.Append(payload{ID: "id2"}))
-	assert.Nil(t, s.Append(payload{ID: "id1", Content: "content1"}))
+	assert.Nil(t, s.Append(&payload{ID: "id1"}))
+	assert.Nil(t, s.Append(&payload{ID: "id2"}))
+	assert.Nil(t, s.Append(&payload{ID: "id1", Content: "content1"}))
 
-	val := s.Get("id1")
-	assert.NotNil(t, val)
-	assert.Equal(t, "content1", val.(payload).Content)
+	var val payload
+	s.Get("id1", &val)
+	assert.NotEmpty(t, val)
+	assert.Equal(t, "content1", val.Content)
 }
 
 func TestStoreGetAll(t *testing.T) {
 	var buff TestClosableBuffer
-	s := New(payloadID, &Options{
+	s := New(&Options{
 		OpenAppend: openAppender(&buff),
 	})
 
-	assert.Nil(t, s.Append(payload{ID: "id1"}))
-	assert.Nil(t, s.Append(payload{ID: "id2"}))
-	assert.Nil(t, s.Append(payload{ID: "id1", Content: "content1"}))
+	assert.Nil(t, s.Append(&payload{ID: "id1"}))
+	assert.Nil(t, s.Append(&payload{ID: "id2"}))
+	assert.Nil(t, s.Append(&payload{ID: "id1", Content: "content1"}))
 
-	val := s.GetAll()
-	assert.NotNil(t, val)
-	assert.Equal(t, 2, len(val))
-	assert.Equal(t, "id2", val[0].(payload).ID)
-	assert.Equal(t, "content1", val[1].(payload).Content)
+	cursor := s.GetAll()
+	assert.Equal(t, 2, cursor.Len())
+
+	var curr payload
+	assert.True(t, cursor.Next())
+	assert.NoError(t, cursor.Value(&curr))
+	assert.Equal(t, "id2", curr.ID)
+	assert.NotEqual(t, "content1", curr.Content)
+
+	assert.True(t, cursor.Next())
+	assert.NoError(t, cursor.Value(&curr))
+	assert.Equal(t, "id1", curr.ID)
+	assert.Equal(t, "content1", curr.Content)
 }
 
 func TestStoreGetUnprocessed(t *testing.T) {
 	var buff TestClosableBuffer
-	s := New(payloadID, &Options{
+	s := New(&Options{
 		OpenAppend: openAppender(&buff),
 	})
 
-	assert.Nil(t, s.Append(payload{ID: "id1"}))
-	assert.Nil(t, s.Append(payload{ID: "id2"}))
-	assert.Nil(t, s.Append(payload{ID: "id1", Content: "content1"}))
+	assert.Nil(t, s.Append(&payload{ID: "id1"}))
+	assert.Nil(t, s.Append(&payload{ID: "id2"}))
+	assert.Nil(t, s.Append(&payload{ID: "id1", Content: "content1"}))
 
-	val := s.GetAll()
-	assert.NotNil(t, val)
-	assert.Len(t, val, 2)
-	assert.Equal(t, "id2", val[0].(payload).ID)
-	assert.Equal(t, "content1", val[1].(payload).Content)
+	cursor := s.GetAll()
+	assert.Equal(t, 2, cursor.Len())
 
-	toProcess := []interface{}{
-		payload{ID: "id1", Content: "content1"},
+	var curr payload
+	assert.True(t, cursor.Next())
+	assert.NoError(t, cursor.Value(&curr))
+	assert.Equal(t, "id2", curr.ID)
+	assert.NotEqual(t, "content1", curr.Content)
+
+	assert.True(t, cursor.Next())
+	assert.NoError(t, cursor.Value(&curr))
+	assert.Equal(t, "id1", curr.ID)
+	assert.Equal(t, "content1", curr.Content)
+
+	toProcess := []IndexMarshaller{
+		&payload{ID: "id1", Content: "content1"},
 	}
 	assert.NoError(t, s.MarkProcessed(toProcess))
-	val = s.GetUnprocessed()
+	cursor = s.GetUnprocessed()
 
-	assert.Len(t, val, 1)
+	assert.Equal(t, cursor.Len(), 1)
 }
