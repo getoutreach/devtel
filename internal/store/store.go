@@ -22,6 +22,7 @@ type entry struct {
 	Processed bool                   `json:"processed,omitempty"`
 }
 
+
 type bag map[string]interface{}
 
 func (b bag) MarshalRecord(addField func(name string, value interface{})) {

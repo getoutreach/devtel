@@ -8,6 +8,39 @@ import (
 	"github.com/getoutreach/gobox/pkg/trace"
 )
 
+type eventBag map[string]interface{}
+
+func (b eventBag) MarshalRecord(addField func(name string, value interface{})) {
+	for k, v := range b {
+		if k == "__key" {
+			continue
+		}
+		addField(k, v)
+	}
+}
+
+func (b eventBag) Key() string {
+	var key string
+
+	if v, ok := b["execution_id"]; ok {
+		key = v.(string) + "_"
+	}
+
+	if v, ok := b["hook"]; ok {
+		key += v.(string)
+	}
+
+	return key
+}
+
+func (b eventBag) UnmarshalRecord(data map[string]interface{}) error {
+	for k, v := range data {
+		b[k] = v
+	}
+
+	return nil
+}
+
 type tracker struct {
 	s store.Store
 	p Processor
@@ -83,13 +116,14 @@ func (t *tracker) Flush(ctx context.Context) error {
 	var toProcess []interface{}
 
 	for cursor.Next() {
-		var event Event
-		if err := cursor.Value(&event); err != nil {
+		b := make(eventBag)
+		if err := cursor.Value(&b); err != nil {
 			// TODO: probably should logs something here
 			continue
 		}
-		events = append(events, &event)
-		toProcess = append(toProcess, &event)
+
+		events = append(events, &b)
+		toProcess = append(toProcess, &b)
 	}
 
 	err := t.p.ProcessRecords(ctx, toProcess)
