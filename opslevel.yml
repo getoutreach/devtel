@@ -1,0 +1,44 @@
+# yaml-language-server: $schema=https://www.opslevel.com/opslevel.schema.yml
+
+# Available options are listed here: https://app.opslevel.com/account
+# To find the alias for a given lifecycle: https://www.opslevel.com/docs/api/opslevel-yml/#finding-the-alias-for-a-lifecycle
+# To find the alias for a given tier: https://www.opslevel.com/docs/api/opslevel-yml/#finding-the-alias-for-a-tier
+# More examples: https://opslevel.com/docs/api/opslevel-yml/#example-service-opslevelyml
+
+version: 1
+service:
+  name: devtel
+  product: Outreach
+  owner: fnd_dtss
+  language: Golang
+  framework: bootstrap
+  description: Devspace telemetry plugin
+  ###Block(extraServiceMetadata)
+  ###EndBlock(extraServiceMetadata)
+  aliases:
+    ###Block(extraAliases)
+    ###EndBlock(extraAliases)
+    - devtel
+  tags:
+    ###Block(extraTags)
+    ###EndBlock(extraTags)
+    - key: repo
+      value: devtel
+    - key: reporting_team
+      value: fnd-dtss
+    - key: app
+      value: devtel
+    - key: name
+      value: devtel
+    - key: bootstrap_version
+      value: "v9.37.0-rc.25"
+    - key: golang_version
+      value: "1.17.9"
+    - key: library
+      value: "true"
+    - key: cli
+      value: "true"
+  repositories:
+    - name: getoutreach/devtel
+      path: "/"
+      provider: github
