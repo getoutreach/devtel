@@ -5,7 +5,7 @@ slack: dev-tooling-notifications
 library: true
 commands:
   - devtel
-circleAPIKey: ""
+circleAPIKey: "2b5e5793e375e5a6ddf98251848372496e943192"
 lintroller: platinum
 releaseType: semver
 releaseOptions:
@@ -30,18 +30,14 @@ arguments:
     datadogDashboards:
       mainLink: ""
     designDocumentLink: ""
-  oss: false
+  oss: true
   releaseOptions:
     allowMajorVersions: true
     enablePrereleases: true
   reportingTeam: fnd-dtss
   type:
     - library
-  vaultSecrets:
-    - deploy/honeycomb_new/%(environment)s/honeycomb
-    - deploy/launchdarkly/%(environment)s/launchdarkly
-    - deploy/mint/%(environment)s/validation/mint-validator-payload
-    - deploy/flagship-shared-secret/%(environment)s/authn-flagship-payload
+  vaultSecrets: []
 modules:
   - name: github.com/getoutreach/stencil-base
     version: v0.2.1-rc.1
