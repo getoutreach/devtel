@@ -1,12 +1,12 @@
 version: v1.12.1
-generated: 2022-05-02T15:26:30.85162Z
+generated: 2022-05-03T16:13:20.39209Z
 modules:
 - name: github.com/getoutreach/stencil-base
   url: https://github.com/getoutreach/stencil-base
   version: v0.2.1-rc.1
 - name: github.com/getoutreach/stencil-golang
   url: https://github.com/getoutreach/stencil-golang
-  version: v0.2.1
+  version: v0.2.2
 files:
 - name: .editorconfig
   template: .editorconfig.tpl
