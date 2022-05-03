@@ -13,8 +13,10 @@ import (
 	gcli "github.com/getoutreach/gobox/pkg/cli"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
+
 	// Place any extra imports for your startup code here
 	///Block(imports)
+	"github.com/getoutreach/devtel/cmd/devtel/track"
 	///EndBlock(imports)
 )
 
@@ -35,6 +37,7 @@ const HoneycombDataset = ""
 ///EndBlock(honeycombDataset)
 
 ///Block(global)
+
 ///EndBlock(global)
 
 func main() {
@@ -42,24 +45,29 @@ func main() {
 	log := logrus.New()
 
 	///Block(init)
+
 	///EndBlock(init)
 
 	app := cli.App{
 		Version: oapp.Version,
 		Name:    "devtel",
 		///Block(app)
+
 		///EndBlock(app)
 	}
 	app.Flags = []cli.Flag{
 		///Block(flags)
+
 		///EndBlock(flags)
 	}
 	app.Commands = []*cli.Command{
 		///Block(commands)
+		track.NewCommand(TeleforkAPIKey),
 		///EndBlock(commands)
 	}
 
 	///Block(postApp)
+
 	///EndBlock(postApp)
 
 	// Insert global flags, tracing, updating and start the application.

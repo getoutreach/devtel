@@ -21,5 +21,9 @@ plugins:
   # Create the Github Release
   - - "@semantic-release/github"
     - assets:
-        - "dist/*.tar.gz"
+        - "dist/*/devtel*"
         - "dist/checksums.txt"
+  - - "@semantic-release/git"
+    - assets:
+        - "plugin.yaml"
+      message: "chore(release): ${nextRelease.version}\n\n${nextRelease.notes}"
