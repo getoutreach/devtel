@@ -56,54 +56,16 @@ type EventTracker struct {
 
 // Tracker is the entry interface into event tracking, matching and processing.
 type Tracker interface {
-	Init(context.Context) error
-
-	AddDefaultField(string, interface{})
-
 	Track(context.Context, *Event)
 	Flush(context.Context) error
 }
 
-// Options are the options for configuring the tracker.
-type Options struct {
-	Store store.Store
-}
-
 // NewTracker creates a new DevspaceTracker.
-func NewTracker(p Processor, opts ...func(*Options)) *EventTracker {
-	o := &Options{}
-	for _, opt := range opts {
-		opt(o)
-	}
-
-	if o.Store == nil {
-		o.Store = store.New(&store.Options{})
-	}
-
+func NewTracker(p Processor, s store.Store) *EventTracker {
 	return &EventTracker{
-		s: o.Store,
+		s: s,
 		p: p,
 	}
-}
-
-// WithStore provides the store for the tracker.
-func WithStore(s store.Store) func(opts *Options) {
-	return func(opts *Options) {
-		opts.Store = s
-	}
-}
-
-// Init intializes the store.
-func (t *EventTracker) Init(ctx context.Context) error {
-	ctx = trace.StartCall(ctx, "tracker.Init")
-	defer trace.EndCall(ctx)
-
-	return trace.SetCallStatus(ctx, t.s.Init(ctx))
-}
-
-// AddDefaultField adds a default field to be added the event.
-func (t *EventTracker) AddDefaultField(k string, v interface{}) {
-	t.s.AddDefaultField(k, v)
 }
 
 // Track stores and matches an event.

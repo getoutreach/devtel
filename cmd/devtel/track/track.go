@@ -16,6 +16,7 @@ import (
 	"github.com/urfave/cli/v2"
 
 	"github.com/getoutreach/devtel/internal/devspace"
+	"github.com/getoutreach/devtel/internal/store"
 	"github.com/getoutreach/devtel/internal/telefork"
 	"github.com/getoutreach/gobox/pkg/trace"
 )
@@ -57,18 +58,18 @@ func NewCommand(teleforkAPIKey string) *cli.Command {
 		Name:  "track",
 		Usage: "Track events",
 		Action: func(c *cli.Context) error {
-			ctx := trace.StartCall(c.Context, "store.Append")
-			defer trace.EndCall(ctx)
-
-			t := devspace.NewTracker(telefork.NewProcessor(c.App.Name, teleforkAPIKey))
-			if err := t.Init(ctx); err != nil {
+			s := store.New(&store.Options{})
+			p := telefork.NewProcessor(c.App.Name, teleforkAPIKey)
+			if err := s.Init(c.Context); err != nil {
 				//nolint:errcheck // Why: We don't wat to crash devspace because of telemetry errors.
-				trace.SetCallStatus(ctx, err)
+				trace.SetCallStatus(c.Context, err)
 				return nil
 			}
-			p := commonProps()
-			for k, v := range p {
-				t.AddDefaultField(k, v)
+			t := devspace.NewTracker(p, s)
+
+			props := commonProps()
+			for k, v := range props {
+				s.AddDefaultField(k, v)
 			}
 
 			defer t.Flush(c.Context)

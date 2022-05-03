@@ -84,7 +84,7 @@ func TestEventWrittenToBuffer(t *testing.T) {
 			return &buff, nil
 		},
 	})
-	r := NewTracker(&testProcessor{}, WithStore(s))
+	r := NewTracker(&testProcessor{}, s)
 
 	var before Event
 	assert.NoError(t, json.Unmarshal([]byte(beforeEvent), &before))
@@ -102,7 +102,7 @@ func TestEventMatched(t *testing.T) {
 			return &buff, nil
 		},
 	})
-	r := NewTracker(&testProcessor{}, WithStore(s))
+	r := NewTracker(&testProcessor{}, s)
 
 	var before, after Event
 	assert.NoError(t, json.Unmarshal([]byte(beforeEvent), &before))
@@ -128,8 +128,8 @@ func TestCanUseRestoredEvents(t *testing.T) {
 			return &buff, nil
 		},
 	})
-	r := NewTracker(p, WithStore(s))
-	assert.NoError(t, r.Init(context.Background()))
+	r := NewTracker(p, s)
+	assert.NoError(t, s.Init(context.Background()))
 
 	var after Event
 	assert.NoError(t, json.Unmarshal([]byte(afterEvent), &after))
@@ -147,7 +147,7 @@ func TestCanProcessEvents(t *testing.T) {
 			return &buff, nil
 		},
 	})
-	r := NewTracker(p, WithStore(s))
+	r := NewTracker(p, s)
 
 	var before, after Event
 	assert.NoError(t, json.Unmarshal([]byte(beforeEvent), &before))
@@ -173,10 +173,10 @@ func TestProcessesWithDefaultFields(t *testing.T) {
 			return &buff, nil
 		},
 	})
-	r := NewTracker(p, WithStore(s))
-	assert.NoError(t, r.Init(context.Background()))
+	r := NewTracker(p, s)
+	assert.NoError(t, s.Init(context.Background()))
 
-	r.AddDefaultField("defaultField", "present")
+	s.AddDefaultField("defaultField", "present")
 
 	var before Event
 	assert.NoError(t, json.Unmarshal([]byte(beforeEvent), &before))
