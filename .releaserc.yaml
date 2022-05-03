@@ -21,7 +21,7 @@ plugins:
   # Create the Github Release
   - - "@semantic-release/github"
     - assets:
-        - "dist/*/devtel*"
+        - "dist/**/devtel*"
         - "dist/checksums.txt"
   - - "@semantic-release/git"
     - assets:
