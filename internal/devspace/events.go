@@ -78,6 +78,26 @@ type Command struct {
 	Args  []string `json:"args,omitempty"`
 }
 
+// Devenv contains the details about devenv environment variables provided with the event.
+type Devenv struct {
+	Bin                    string `json:"bin,omitempty"`
+	Version                string `json:"version,omitempty"`
+	KindBin                string `json:"kind_bin,omitempty"`
+	DevspaceBin            string `json:"devspace_bin,omitempty"`
+	Type                   string `json:"type,omitempty"`
+	DevDeploymentProfile   string `json:"dev_deployment_profile,omitempty"`
+	DeployVersion          string `json:"deploy_version,omitempty"`
+	DeployImageSource      string `json:"deploy_image_source,omitempty"`
+	DeployImageRegistry    string `json:"deploy_image_registry,omitempty"`
+	DeployDevImageRegistry string `json:"deploy_dev_image_registry,omitempty"`
+	DeployBoxImageRegistry string `json:"deploy_box_image_registry,omitempty"`
+	DeployAppname          string `json:"deploy_appname,omitempty"`
+
+	DeployUseDevspace     bool `json:"deploy_use_devspace,omitempty"`
+	DevSkipPortforwarding bool `json:"dev_skip_portforwarding,omitempty"`
+	DevTerminal           bool `json:"dev_terminal,omitempty"`
+}
+
 // Event contains the details about the devspace hook event.
 type Event struct {
 	Name string `json:"event,omitempty"`
@@ -90,6 +110,7 @@ type Event struct {
 	Status string `json:"status,omitempty"`
 
 	Command *Command `json:"command,omitempty"`
+	Devenv  *Devenv  `json:"devenv,omitempty"`
 
 	Timestamp    int64     `json:"timestamp"`
 	TimestampTag time.Time `json:"@timestamp,omitempty"`
@@ -164,6 +185,32 @@ func EventFromEnv() *Event {
 
 	t := time.Now()
 
+	command := &Command{
+		Name:  os.Getenv("DEVSPACE_PLUGIN_COMMAND"),
+		Line:  os.Getenv("DEVSPACE_PLUGIN_COMMAND_LINE"),
+		Flags: flags,
+		Args:  args,
+	}
+
+	devenv := &Devenv{
+		Bin:                    os.Getenv("DEVENV_BIN"),
+		Version:                os.Getenv("DEVENV_VERSION"),
+		KindBin:                os.Getenv("DEVENV_KIND_BIN"),
+		DevspaceBin:            os.Getenv("DEVENV_DEVSPACE_BIN"),
+		Type:                   os.Getenv("DEVENV_TYPE"),
+		DevDeploymentProfile:   os.Getenv("DEVENV_DEV_DEPLOYMENT_PROFILE"),
+		DeployVersion:          os.Getenv("DEVENV_DEPLOY_VERSION"),
+		DeployImageSource:      os.Getenv("DEVENV_DEPLOY_IMAGE_SOURCE"),
+		DeployImageRegistry:    os.Getenv("DEVENV_DEPLOY_IMAGE_REGISTRY"),
+		DeployDevImageRegistry: os.Getenv("DEVENV_DEPLOY_DEV_IMAGE_REGISTRY"),
+		DeployBoxImageRegistry: os.Getenv("DEVENV_DEPLOY_BOX_IMAGE_REGISTRY"),
+		DeployAppname:          os.Getenv("DEVENV_DEPLOY_APPNAME"),
+
+		DeployUseDevspace:     os.Getenv("DEVENV_DEPLOY_USE_DEVSPACE") != "",
+		DevTerminal:           os.Getenv("DEVENV_DEV_TERMINAL") != "",
+		DevSkipPortforwarding: os.Getenv("DEVENV_DEV_SKIP_PORTFORWARDING") != "",
+	}
+
 	return &Event{
 		Name:        "devspace_hook",
 		Hook:        os.Getenv("DEVSPACE_PLUGIN_EVENT"),
@@ -171,12 +218,8 @@ func EventFromEnv() *Event {
 		Error:       errMsg,
 		Status:      status,
 
-		Command: &Command{
-			Name:  os.Getenv("DEVSPACE_PLUGIN_COMMAND"),
-			Line:  os.Getenv("DEVSPACE_PLUGIN_COMMAND_LINE"),
-			Flags: flags,
-			Args:  args,
-		},
+		Command: command,
+		Devenv:  devenv,
 
 		Timestamp:    t.UnixMilli(),
 		TimestampTag: t,
