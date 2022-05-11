@@ -155,6 +155,26 @@ func (e *Event) MarshalRecord(addField func(name string, value interface{})) {
 			addField("command.args", e.Command.Args)
 		}
 	}
+
+	if e.Devenv != nil {
+		addField("devenv.runtime", e.Devenv.Type)
+
+		addField("devenv.bin", e.Devenv.Bin)
+		addField("devenv.version", e.Devenv.Version)
+		addField("devenv.kind_bin", e.Devenv.KindBin)
+		addField("devenv.devspace_bin", e.Devenv.DevspaceBin)
+		addField("devenv.dev_deployment_profile", e.Devenv.DevDeploymentProfile)
+		addField("devenv.deploy_version", e.Devenv.DeployVersion)
+		addField("devenv.deploy_image_source", e.Devenv.DeployImageSource)
+		addField("devenv.deploy_image_registry", e.Devenv.DeployImageRegistry)
+		addField("devenv.deploy_dev_image_registry", e.Devenv.DeployDevImageRegistry)
+		addField("devenv.deploy_box_image_registry", e.Devenv.DeployBoxImageRegistry)
+		addField("devenv.deploy_appname", e.Devenv.DeployAppname)
+
+		addField("devenv.deploy_use_devspace", e.Devenv.DeployUseDevspace)
+		addField("devenv.dev_skip_portforwarding", e.Devenv.DevSkipPortforwarding)
+		addField("devenv.dev_terminal", e.Devenv.DevTerminal)
+	}
 }
 
 // UnmarshalRecord unmarshals the event data from the map into Event.
