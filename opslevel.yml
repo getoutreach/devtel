@@ -11,32 +11,42 @@ service:
   product: Outreach
   owner: fnd_dtss
   language: Golang
-  framework: bootstrap
-  description: Devspace telemetry plugin
+  framework: stencil
+  description: >
+    Devspace telemetry plugin
   ###Block(extraServiceMetadata)
   ###EndBlock(extraServiceMetadata)
   aliases:
     ###Block(extraAliases)
+
     ###EndBlock(extraAliases)
     - devtel
   tags:
     ###Block(extraTags)
+
     ###EndBlock(extraTags)
     - key: repo
-      value: devtel
+      value: "https://github.com/getoutreach/devtel"
     - key: reporting_team
-      value: fnd-dtss
+      value: "fnd-dtss"
     - key: app
-      value: devtel
+      value: "devtel"
     - key: name
-      value: devtel
-    - key: bootstrap_version
-      value: "v9.37.0-rc.26"
+      value: "devtel"
+    - key: stencil_version
+      value: "v1.15.0"
     - key: golang_version
       value: "1.17.9"
-    - key: library
-      value: "true"
+    - key: tutorial
+      value: "false"
     - key: cli
+      value: "true"
+    - key: service
+      value: "false"
+      # This is necessary for filters in OpsLevel because we have to assume all things are
+      # services if they don't have the `servce` tag. So we can gaurantee this tag for
+      # bootstrapped CLIs/Libraries.
+    - key: notservice
       value: "true"
   repositories:
     - name: getoutreach/devtel

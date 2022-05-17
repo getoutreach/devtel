@@ -5,7 +5,7 @@ before:
 builds:
   - main: ./cmd/devtel
     id: &name devtel
-    binary: devtel_{{ .Target }}{{ .Ext }}
+    binary: *name
     goos:
       - linux
       - darwin
@@ -18,9 +18,7 @@ builds:
       - '-X "main.TeleforkAPIKey={{ .Env.TELEFORK_APIKEY }}"'
     env:
       - CGO_ENABLED=0
-archives:
-  - id: &name devtel
-    format: binary
+archives: []
 checksum:
   name_template: "checksums.txt"
 release:
