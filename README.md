@@ -14,5 +14,7 @@ Please read the [CONTRIBUTING.md](CONTRIBUTING.md) document for guidelines on de
 ## High-level Overview
 
 <!--- Block(overview) -->
+
 Gathers telemetry data for cli based tooling.
+
 <!--- EndBlock(overview) -->
