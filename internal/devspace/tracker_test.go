@@ -58,6 +58,7 @@ var afterEvent = `{
 // For the sake of understanding what's insinde, the JSON is indented.
 // Here, we remove the indentation so we can use them in the tests as expected.
 // Unmarshal and marshal back, but without indentation.
+//
 //nolint:gochecknoinits // Why: helps understand the test data
 func init() {
 	log.SetOutput(io.Discard)

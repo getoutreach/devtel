@@ -4,7 +4,7 @@ _ := $(shell ./scripts/devbase.sh)
 
 include .bootstrap/root/Makefile
 
-###Block(targets)
+## <<Stencil::Block(targets)>>
 pre-release::
 	./scripts/update-plugin-version.sh $(APP_VERSION)
-###EndBlock(targets)
+## <</Stencil::Block>>
