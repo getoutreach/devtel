@@ -15,7 +15,7 @@ service:
   description: >
     Devspace telemetry plugin
   lifecycle: public_ga
-  tier: tier_0
+  tier: tier_2
   ## <<Stencil::Block(extraServiceMetadata)>>
 
   ## <</Stencil::Block>>
